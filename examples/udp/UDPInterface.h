@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../src/Interface.h"
-#include "../src/Bytes.h"
-#include "../src/Type.h"
+#include "Interface.h"
+#include "Bytes.h"
+#include "Type.h"
 
 #ifdef ARDUINO
 #include <WiFi.h>
@@ -16,11 +16,11 @@
 
 #define DEFAULT_UDP_PORT		4242
 #define DEFAULT_UDP_LOCAL_HOST	"0.0.0.0"
-#define DEFAULT_UDP_REMOTE_HOST	"255.255.255.255"
+#define DEFAULT_UDP_REMOTE_HOST	"192.168.178.117"
 
 namespace RNS { namespace Interfaces {
 
-    class UDPInterface : public Interface {
+    class UDPInterface : public RNS::InterfaceImpl {
 
 	public:
 		static const uint32_t BITRATE_GUESS = 10*1000*1000;
@@ -37,12 +37,12 @@ namespace RNS { namespace Interfaces {
 		void stop();
 		void loop();
 
-		virtual inline std::string toString() const { return "UDPInterface[" + name() + "/" + _local_host + ":" + std::to_string(_local_port) + "]"; }
+		virtual inline std::string toString() const { return "UDPInterface[" + _name + "/" + _local_host + ":" + std::to_string(_local_port) + "]"; }
 		//virtual inline std::string toString() const { return "UDPInterface[" + name() + "]"; }
 
 	private:
-	    virtual void on_incoming(const Bytes& data);
-		virtual void on_outgoing(const Bytes& data);
+	    virtual void handle_incoming(const Bytes& data);
+		virtual void send_outgoing(const Bytes& data);
 
 	private:
 		const uint16_t HW_MTU = 1064;

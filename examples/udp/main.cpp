@@ -1,6 +1,7 @@
 //#define NDEBUG
 
 #include "UDPInterface.h"
+#include "FileSystem.h"
 
 #include "Reticulum.h"
 #include "Identity.h"
@@ -46,7 +47,7 @@ const char* fruits[] = {"Peach", "Quince", "Date", "Tangerine", "Pomelo", "Caram
 const char* noble_gases[] = {"Helium", "Neon", "Argon", "Krypton", "Xenon", "Radon", "Oganesson"};
 
 double last_announce = 0.0;
-bool send_announce = false;
+bool send_announce = true;
 
 // Test AnnounceHandler
 class ExampleAnnounceHandler : public RNS::AnnounceHandler {
@@ -90,7 +91,9 @@ RNS::Reticulum reticulum({RNS::Type::NONE});
 RNS::Identity identity({RNS::Type::NONE});
 RNS::Destination destination({RNS::Type::NONE});
 
-RNS::Interfaces::UDPInterface udp_interface("udp");
+//RNS::Interfaces::UDPInterface udp_interface("udp");
+
+RNS::Interface udp_interface(new RNS::Interfaces::UDPInterface("udp"));
 
 //ExampleAnnounceHandler announce_handler((const char*)"example_utilities.announcesample.fruits");
 //RNS::HAnnounceHandler announce_handler(new ExampleAnnounceHandler("example_utilities.announcesample.fruits"));
@@ -103,9 +106,11 @@ void reticulum_announce() {
 		// test path
 		//destination.announce(RNS::bytesFromString(fruits[RNS::Cryptography::randomnum() % 7]), true, nullptr, RNS::bytesFromString("test_tag"));
 		// test packet send
-		destination.announce(RNS::bytesFromString(fruits[RNS::Cryptography::randomnum() % 7]));
+		destination.announce(RNS::bytesFromString(fruits[RNS::Cryptography::randomnum() % 2]), true, udp_interface);
 	}
 }
+
+RNS::FileSystem test_filesystem(RNS::Type::NONE);
 
 void reticulum_setup() {
 	INFO("Setting up Reticulum...");
@@ -120,11 +125,18 @@ void reticulum_setup() {
 
 		// 21.8% baseline here with serial
 
+		test_filesystem = new FileSystem();
+		((FileSystem*)test_filesystem.get())->init();
+		FileSystem::listDir("/");
+		FileSystem::listDir("/cache");
+		RNS::Utilities::OS::register_filesystem(test_filesystem);
+
 		HEAD("Registering Interface instances with Transport...", RNS::LOG_TRACE);
 		udp_interface.mode(RNS::Type::Interface::MODE_GATEWAY);
 		RNS::Transport::register_interface(udp_interface);
 
 		HEAD("Starting UDPInterface...", RNS::LOG_TRACE);
+		RNS::Interfaces::UDPInterface* const udp_interfaceimpl = static_cast<RNS::Interfaces::UDPInterface*>( udp_interface.get() );
 		udp_interface.start("wifi_ssid", "wifi_password", 4242);
 
 		HEAD("Creating Reticulum instance...", RNS::LOG_TRACE);
@@ -153,7 +165,7 @@ void reticulum_setup() {
 
 		HEAD("Creating Destination instance...", RNS::LOG_TRACE);
 		//RNS::Destination destination(identity, RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, "app", "aspects");
-		destination = RNS::Destination(identity, RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, "app", "aspects");
+		destination = RNS::Destination(identity, RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, "example_utilities", "fruits");
 		// 23.0% (+0.4%)
 
 		// Register DATA packet callback
@@ -216,7 +228,7 @@ void reticulum_setup() {
 void reticulum_teardown() {
 	INFO("Tearing down Reticulum...");
 
-	RNS::Transport::save_path_table();
+	//RNS::Transport::save_path_table();
 
 	try {
 
@@ -282,15 +294,15 @@ void setup() {
 void loop() {
 
 	reticulum.loop();
-	udp_interface.loop();
+	((RNS::Interfaces::UDPInterface*)udp_interface.get())->loop();
 
 #ifdef ARDUINO
-/*
-	if ((RNS::Utilities::OS::time() - last_announce) > 10) {
+
+	if ((RNS::Utilities::OS::time() - last_announce) > 100) {
 		reticulum_announce();
 		last_announce = RNS::Utilities::OS::time();
 	}
-*/
+
 #endif
 	if (send_announce) {
 		reticulum_announce();

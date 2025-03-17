@@ -164,7 +164,7 @@ void tlsf_mem_walker(void* ptr, size_t size, int used, void* user)
 	}
 }
 void dump_tlsf_stats() {
-	_tlsf_used_count = 0;
+/*	_tlsf_used_count = 0;
 	_tlsf_used_size = 0;
 	_tlsf_free_count = 0;
 	_tlsf_free_size = 0;
@@ -178,6 +178,7 @@ void dump_tlsf_stats() {
 	TRACEF("Free Count:      %u", _tlsf_free_count);
 	TRACEF("Free Size:       %u (%u%% free)", _tlsf_free_size, (unsigned)((double)_tlsf_free_size / (double)_buffer_size * 100.0));
 	TRACEF("Max Free Size:   %u (%u%% fragmented)\n", _tlsf_free_max_size, (unsigned)(100.0 - (double)_tlsf_free_max_size / (double)_tlsf_free_size * 100.0));
+	*/
 }
 #endif
 

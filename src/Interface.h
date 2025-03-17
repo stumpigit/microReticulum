@@ -45,7 +45,7 @@ namespace RNS {
 		// CBA send data out on interface
 		virtual void send_outgoing(const Bytes& data);
 		// CBA handle data coming in on interface
-		//virtual void handle_incoming(const Bytes& data);
+		virtual void handle_incoming(const Bytes& data);
 
 	protected:
 		Interface* _parent = nullptr;
@@ -140,9 +140,9 @@ namespace RNS {
 	protected:
 		inline void send_outgoing(const Bytes& data) { assert(_impl); _impl->send_outgoing(data); }
 	public:
-		//inline void handle_incoming(const Bytes& data) { assert(_impl); _impl->handle_incoming(data); }
+		inline void handle_incoming(const Bytes& data) { assert(_impl); _impl->handle_incoming(data); }
 		// CBA handle data coming in on interface
-		void handle_incoming(const Bytes& data);
+		//void handle_incoming(const Bytes& data);
 
 		// getters/setters
 	protected:

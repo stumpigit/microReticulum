@@ -1,7 +1,8 @@
 #include "UDPInterface.h"
 
-#include "../src/Log.h"
+#include "Log.h"
 
+#include "Transport.h"
 #include <memory>
 
 #ifndef ARDUINO
@@ -30,12 +31,13 @@ def get_broadcast_for_if(name):
 	return ifaddr[netinfo.AF_INET][0]["broadcast"]
 */
 
-//p def __init__(self, owner, name, device=None, bindip=None, bindport=None, forwardip=None, forwardport=None):
-UDPInterface::UDPInterface(const char* name /*= "UDPInterface"*/) : Interface(name) {
 
-	IN(true);
-	OUT(true);
-	bitrate(BITRATE_GUESS);
+
+//p def __init__(self, owner, name, device=None, bindip=None, bindport=None, forwardip=None, forwardport=None):
+UDPInterface::UDPInterface(const char *name) : RNS::InterfaceImpl(name) {
+	_IN = true;
+	_OUT = true;
+	_bitrate = BITRATE_GUESS;
 
 }
 
@@ -44,7 +46,7 @@ UDPInterface::UDPInterface(const char* name /*= "UDPInterface"*/) : Interface(na
 }
 
 bool UDPInterface::start(const char* wifi_ssid, const char* wifi_password, int port /*= DEFAULT_UDP_PORT*/, const char* local_host /*=nullptr*/) {
-	online(false);
+	_online = false;
  
 	if (wifi_ssid != nullptr) {
 		_wifi_ssid = wifi_ssid;
@@ -174,7 +176,7 @@ bool UDPInterface::start(const char* wifi_ssid, const char* wifi_password, int p
 	}
 #endif
 
-	online(true);
+	_online=true;
 
 	return true;
 }
@@ -188,19 +190,19 @@ void UDPInterface::stop() {
 	}
 #endif
 
-	online(false);
+	_online=false;
 }
 
 void UDPInterface::loop() {
-
-	if (online()) {
+	if (_online) {
 		// Check for incoming packet
 #ifdef ARDUINO
-		udp.parsePacket();
-		size_t len = udp.read(_buffer.writable(Type::Reticulum::MTU), Type::Reticulum::MTU);
-		if (len > 0) {
-			_buffer.resize(len);
-			on_incoming(_buffer);
+		if (udp.parsePacket()) {
+			size_t len = udp.read(_buffer.writable(Type::Reticulum::MTU), Type::Reticulum::MTU);
+			if (len > 0) {
+				_buffer.resize(len);
+				handle_incoming(_buffer);
+			}
 		}
 #else
 		size_t available = 0;
@@ -218,15 +220,15 @@ void UDPInterface::loop() {
 	}
 }
 
-/*virtual*/ void UDPInterface::on_incoming(const Bytes& data) {
+/*virtual*/ void UDPInterface::handle_incoming(const Bytes& data) {
 	DEBUG(toString() + ".on_incoming: data: " + data.toHex());
-	Interface::on_incoming(data);
+	InterfaceImpl::handle_incoming(data);
 }
 
-/*virtual*/ void UDPInterface::on_outgoing(const Bytes& data) {
+/*virtual*/ void UDPInterface::send_outgoing(const Bytes& data) {
 	DEBUG(toString() + ".on_outgoing: data: " + data.toHex());
 	try {
-		if (online()) {
+		if (_online) {
 			// Send packet
 #ifdef ARDUINO
 			udp.beginPacket(_remote_host.c_str(), _remote_port);
@@ -242,8 +244,8 @@ void UDPInterface::loop() {
 			TRACE("Sent " + std::to_string(sent) + " bytes to " + std::string(_remote_host) + ":" + std::to_string(_remote_port));
 #endif
 		}
-
-		Interface::on_outgoing(data);
+		
+		InterfaceImpl::send_outgoing(data);
 	}
 	catch (std::exception& e) {
 		ERROR("Could not transmit on " + toString() + ". The contained exception was: " + e.what());
