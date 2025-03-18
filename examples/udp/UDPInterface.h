@@ -16,7 +16,8 @@
 
 #define DEFAULT_UDP_PORT		4242
 #define DEFAULT_UDP_LOCAL_HOST	"0.0.0.0"
-#define DEFAULT_UDP_REMOTE_HOST	"192.168.178.117"
+#define DEFAULT_UDP_REMOTE_HOST	"192.168.56.91"
+//#define DEFAULT_UDP_REMOTE_HOST	"192.168.178.117"
 
 namespace RNS { namespace Interfaces {
 
@@ -35,13 +36,13 @@ namespace RNS { namespace Interfaces {
 
 		bool start(const char* wifi_ssid, const char* wifi_password, int port = DEFAULT_UDP_PORT, const char* local_host = nullptr);
 		void stop();
-		void loop();
+		void loop(RNS::Interface& udp_interface);
 
 		virtual inline std::string toString() const { return "UDPInterface[" + _name + "/" + _local_host + ":" + std::to_string(_local_port) + "]"; }
 		//virtual inline std::string toString() const { return "UDPInterface[" + name() + "]"; }
 
 	private:
-	    virtual void handle_incoming(const Bytes& data);
+	    //virtual void handle_incoming(const Bytes& data);
 		virtual void send_outgoing(const Bytes& data);
 
 	private:

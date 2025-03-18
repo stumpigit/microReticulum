@@ -44,8 +44,6 @@ namespace RNS {
 	protected:
 		// CBA send data out on interface
 		virtual void send_outgoing(const Bytes& data);
-		// CBA handle data coming in on interface
-		virtual void handle_incoming(const Bytes& data);
 
 	protected:
 		Interface* _parent = nullptr;
@@ -140,9 +138,9 @@ namespace RNS {
 	protected:
 		inline void send_outgoing(const Bytes& data) { assert(_impl); _impl->send_outgoing(data); }
 	public:
-		inline void handle_incoming(const Bytes& data) { assert(_impl); _impl->handle_incoming(data); }
+		//inline void handle_incoming(const Bytes& data) { assert(_impl); _impl->handle_incoming(data); }
 		// CBA handle data coming in on interface
-		//void handle_incoming(const Bytes& data);
+		void handle_incoming(const Bytes& data);
 
 		// getters/setters
 	protected:
@@ -171,7 +169,7 @@ namespace RNS {
 		inline bool is_connected_to_shared_instance() const { assert(_impl); return _impl->_is_connected_to_shared_instance; }
 		inline bool is_local_shared_instance() const { assert(_impl); return _impl->_is_local_shared_instance; }
 		inline HInterface parent_interface() const { assert(_impl); return _impl->_parent_interface; }
-
+		
 		virtual inline std::string toString() const { if (!_impl) return ""; return "Interface[" + _impl->_name + "]"; }
 
 #ifndef NDEBUG

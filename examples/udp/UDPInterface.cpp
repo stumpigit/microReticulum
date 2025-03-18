@@ -3,6 +3,7 @@
 #include "Log.h"
 
 #include "Transport.h"
+#include <cstdlib> 
 #include <memory>
 
 #ifndef ARDUINO
@@ -42,6 +43,7 @@ UDPInterface::UDPInterface(const char *name) : RNS::InterfaceImpl(name) {
 }
 
 /*virtual*/ UDPInterface::~UDPInterface() {
+	TRACE("UDPInterface: deregistering");
 	stop();
 }
 
@@ -193,7 +195,7 @@ void UDPInterface::stop() {
 	_online=false;
 }
 
-void UDPInterface::loop() {
+void UDPInterface::loop(RNS::Interface& udp_interface) {
 	if (_online) {
 		// Check for incoming packet
 #ifdef ARDUINO
@@ -201,7 +203,9 @@ void UDPInterface::loop() {
 			size_t len = udp.read(_buffer.writable(Type::Reticulum::MTU), Type::Reticulum::MTU);
 			if (len > 0) {
 				_buffer.resize(len);
-				handle_incoming(_buffer);
+				//((RNS::Interface::Interface*)udp_interface.get())->loop();
+				udp_interface.handle_incoming(_buffer);
+				//_parent_interface->handle_incoming(_buffer);
 			}
 		}
 #else
@@ -220,10 +224,10 @@ void UDPInterface::loop() {
 	}
 }
 
-/*virtual*/ void UDPInterface::handle_incoming(const Bytes& data) {
+
+/*void UDPInterface::handle_incoming(const Bytes& data) {
 	DEBUG(toString() + ".on_incoming: data: " + data.toHex());
-	InterfaceImpl::handle_incoming(data);
-}
+}*/
 
 /*virtual*/ void UDPInterface::send_outgoing(const Bytes& data) {
 	DEBUG(toString() + ".on_outgoing: data: " + data.toHex());

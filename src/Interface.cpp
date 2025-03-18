@@ -15,16 +15,16 @@ using namespace RNS::Type::Interface;
 }
 
 /*virtual*/ //void InterfaceImpl::handle_incoming(const Bytes& data) {
-void InterfaceImpl::handle_incoming(const Bytes& data) {
+void Interface::handle_incoming(const Bytes& data) {
 	//TRACE("Interface.handle_incoming: data: " + data.toHex());
 	TRACE("Interface.handle_incoming");
-	//assert(_impl);
-	_rxb += data.size();
+	assert(_impl);
+	_impl->_rxb += data.size();
 	// CBA TODO implement concept of owner or a callback mechanism for incoming data
 	//_impl->_owner.inbound(data, *this);
-	// Transport::inbound(data, *this);
+	Transport::inbound(data, *this);
 	// CBA This is no good because it frees impl when Interface is destroyed at end of inbound()
-	Transport::inbound(data, Interface(this));
+	//Transport::inbound(data, Interface(this));
 }
 
 void Interface::process_announce_queue() {
