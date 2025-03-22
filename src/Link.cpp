@@ -85,39 +85,68 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 
 }
 
-
-/*p TODO
-Link::validate_request(owner, data, packet) {
-	if len(data) == (Link.ECPUBSIZE):
-		try:
-			link = Link(owner = owner, peer_pub_bytes=data[:Link.ECPUBSIZE//2], peer_sig_pub_bytes=data[Link.ECPUBSIZE//2:Link.ECPUBSIZE])
-			link.set_link_id(packet)
-			link.destination = packet.destination
-			link.establishment_timeout = Link.ESTABLISHMENT_TIMEOUT_PER_HOP * max(1, packet.hops) + Link.KEEPALIVE
-			link.establishment_cost += len(packet.raw)
-			RNS.log("Validating link request "+RNS.prettyhexrep(link.link_id), RNS.LOG_VERBOSE)
-			RNS.log(f"Establishment timeout is {RNS.prettytime(link.establishment_timeout)} for incoming link request "+RNS.prettyhexrep(link.link_id), RNS.LOG_EXTREME)
-			link.handshake()
-			link.attached_interface = packet.receiving_interface
-			link.prove()
-			link.request_time = time.time()
-			RNS.Transport.register_link(link)
-			link.last_inbound = time.time()
-			link.start_watchdog()
-			
-			RNS.log("Incoming link request "+str(link)+" accepted", RNS.LOG_DEBUG)
-			return link
-
-		except Exception as e:
-			RNS.log("Validating link request failed", RNS.LOG_VERBOSE)
-			RNS.log("exc: "+str(e))
-			return None
-
-	else:
-		RNS.log("Invalid link request payload size, dropping request", RNS.LOG_DEBUG)
-		return None
+/*static*/ bool Link::truerequest(const Destination &owner, const Bytes& data, const Packet& packet)
+{
+	return true;
 }
-*/
+
+
+/*static*/ RNS::Link* Link::validate_request(const Destination &owner, const Bytes& data, const Packet& packet) {
+	DEBUG("Validing");
+	if(data.size() == (size_t)ECPUBSIZE) {
+		DEBUG("CS1");
+		try {
+			
+		DEBUG("CS2");
+			const size_t half = ECPUBSIZE / 2;
+            // CS TODO
+			//std::vector<uint8_t> peer_pub_bytes(data->begin(), data.begin() + half);
+            //std::vector<uint8_t> peer_sig_pub_bytes(data.begin() + half, data.end());
+			Link* link = new Link({Type::NONE}, nullptr, nullptr, owner, data, data);
+			
+
+			link->set_link_id(packet);
+			/*if(data.size() == (size_t)(ECPUBSIZE + LINK_MTU_SIZE)) {
+				RNS::log("Link request includes MTU signalling", RNS::LOG_DEBUG);
+				try {
+					int mtu_val = mtu_from_lr_packet(packet);
+					if(mtu_val == -1) mtu_val = RNS::Reticulum::MTU;
+					link->mtu = mtu_val;
+				} catch (const exception& e) {
+					RNS::trace_exception(e);
+					link->mtu = RNS::Reticulum::MTU;
+				}
+			}*/
+			// Dummy: update_mdu() not implemented.
+			link->destination(packet.destination());
+			// CS TODO
+			//link->establishment_timeout = ESTABLISHMENT_TIMEOUT_PER_HOP * max(1, (int)packet->receiving_interface.size()) + KEEPALIVE;
+			//link->establishment_cost += packet->raw.size();
+			RNS::log("Validating link request " + link->link_id().toString(), RNS::LOG_DEBUG);
+			//RNS::log("Link MTU configured to " + RNS::Identity().prettysize(link->mtu), RNS::LOG_EXTREME);
+			//RNS::log("Establishment timeout is " + RNS::Identity().prettytime(link->establishment_timeout) + " for incoming link request " + RNS::Identity().prettyhexrep(link->link_id), RNS::LOG_EXTREME);
+			// CS TODO
+			//link->handshake();
+			link->attached_interface(packet.receiving_interface());
+			link->prove();
+			link->request_time(RNS::Utilities::OS::ltime());
+			RNS::Transport::register_link(*link);
+			link->last_inbound(RNS::Utilities::OS::ltime());
+			// CS TODO
+			//link->__update_phy_stats(packet, true);
+			// CS TODO
+			//link->start_watchdog();
+			RNS::log("Incoming link request " + link->link_id().toHex() + " accepted on " + link->attached_interface().toString(), RNS::LOG_DEBUG);
+			return link;
+		} catch (const std::exception& e) {
+			RNS::log("Validating link request failed: ", RNS::LOG_VERBOSE);
+			return nullptr;
+		}
+	} else {
+		RNS::log("Invalid link request payload size of " + data.size(), RNS::LOG_DEBUG);
+		return nullptr;
+	}
+}
 
 void Link::set_link_id(const Packet& packet) {
 	assert(_object);

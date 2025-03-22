@@ -4,6 +4,7 @@
 #include "Interface.h"
 #include "Packet.h"
 #include "Log.h"
+#include "Link.h"
 
 #include <vector>
 #include <time.h>
@@ -355,9 +356,12 @@ bool Destination::deregister_request_handler(const Bytes& path) {
 */
 
 void Destination::receive(const Packet& packet) {
+	
+	TRACE("CS1_4");
 	assert(_object);
 	if (packet.packet_type() == Type::Packet::LINKREQUEST) {
 		Bytes plaintext(packet.data());
+		DEBUG("Before Incoming_LR");
 		incoming_link_request(plaintext, packet);
 	}
 	else {
@@ -380,12 +384,14 @@ void Destination::receive(const Packet& packet) {
 }
 
 void Destination::incoming_link_request(const Bytes& data, const Packet& packet) {
+	DEBUG("Incoming_LR");
 	assert(_object);
 	if (_object->_accept_link_requests) {
-		//z link = Link::validate_request(data, packet);
-		//z if (link) {
-		//z	_links.append(link);
-		//z }
+		Link *link = RNS::Link::validate_request(*this, data, packet); // Link::validate_request(*this, data, packet);
+		if (link) {
+			DEBUG("Link is validated");
+			//_links.append(link);
+		}
 	}
 }
 

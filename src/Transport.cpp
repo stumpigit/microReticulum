@@ -2047,6 +2047,9 @@ using namespace RNS::Utilities;
 		// Handling for link requests to local destinations
 		else if (packet.packet_type() == Type::Packet::LINKREQUEST) {
 			TRACE("Transport::inbound: Packet is LINKREQUEST");
+			TRACE(packet.transport_id().toHex());
+			TRACE(_identity.hash().toHex());
+
 			if (!packet.transport_id() || packet.transport_id() == _identity.hash()) {
 				TRACE("Transport::inbound: Checking if LINKREQUEST is for local destination");
 #if defined(DESTINATIONS_SET)
@@ -2055,15 +2058,19 @@ using namespace RNS::Utilities;
 #elif defined(DESTINATIONS_MAP)
 				auto iter = _destinations.find(packet.destination_hash());
 				if (iter != _destinations.end()) {
+					TRACE("CS1_1");
 					auto& destination = (*iter).second;
 					if (destination.type() == packet.destination_type()) {
 #endif
+TRACE("CS1_2");
 						packet.destination(destination);
 						// CBA iterator over std::set is always const so need to make temporarily mutable
 						//destination.receive(packet);
 #if defined(DESTINATIONS_SET)
 						const_cast<Destination&>(destination).receive(packet);
 #else
+
+TRACE("CS1_3");
 						destination.receive(packet);
 #endif
 					}

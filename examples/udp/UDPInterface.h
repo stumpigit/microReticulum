@@ -16,7 +16,7 @@
 
 #define DEFAULT_UDP_PORT		4242
 #define DEFAULT_UDP_LOCAL_HOST	"0.0.0.0"
-#define DEFAULT_UDP_REMOTE_HOST	"192.168.56.91"
+#define DEFAULT_UDP_REMOTE_HOST	"192.168.178.97"
 //#define DEFAULT_UDP_REMOTE_HOST	"192.168.178.117"
 
 namespace RNS { namespace Interfaces {

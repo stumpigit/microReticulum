@@ -92,11 +92,22 @@ namespace RNS {
 
 		// getters/setters
 		inline const Destination& destination() const { assert(_object); return _object->_destination; }
+		inline void destination(const Destination& destination) { assert(_object); _object->_destination = destination; }
 		inline const Bytes& link_id() const { assert(_object); return _object->_link_id; }
 		inline const Bytes& hash() const { assert(_object); return _object->_hash; }
 		inline Type::Link::status status() const { assert(_object); return _object->_status; }
+		inline const Interface& attached_interface() const { assert(_object); return _object->_attached_interface; }
+		inline void attached_interface(const Interface& attached_interface) { assert(_object); _object->_attached_interface = attached_interface; }
+		inline const uint64_t request_time() const { assert(_object); return _object->_request_time; }
+		inline void request_time(uint64_t request_time) { assert(_object); _object->_request_time = request_time; }
+		inline const uint64_t last_inbound() const { assert(_object); return _object->_last_inbound; }
+		inline void last_inbound(uint64_t last_inbound) { assert(_object); _object->_last_inbound = last_inbound; }
+		
 
 		inline std::string toString() const { if (!_object) return ""; return "{Link: unknown}"; }
+
+		static RNS::Link* validate_request(const Destination &owner, const Bytes& data, const Packet& packet);
+		static bool truerequest(const Destination &owner, const Bytes& data, const Packet& packet);
 
 	private:
 		class Object {
@@ -140,7 +151,7 @@ namespace RNS {
 			Destination _owner = {Type::NONE};
 			bool _initiator = false;
 			uint8_t _expected_hops = 0;
-			const Interface _attached_interface = {Type::NONE};
+			Interface _attached_interface = {Type::NONE};
 			const Identity ___remote_identity = {Type::NONE};
 			bool ___track_phy_stats = false;
 
