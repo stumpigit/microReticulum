@@ -2,9 +2,11 @@
 
 #include "Log.h"
 #include "Type.h"
+#include "Transport.h"
 #include "Utilities/OS.h"
 
 #include <vector>
+#include <map>
 #include <string>
 #include <memory>
 #include <cassert>
@@ -31,10 +33,15 @@ namespace RNS {
 		//static std::string _cachepath;
 		static char _cachepath[Type::Reticulum::FILEPATH_MAXSIZE];
 
+		static const Reticulum& _instance;
+
 		static bool __transport_enabled;
 		static bool __use_implicit_proof;
 		static bool __allow_probes;
 		static bool panic_on_interface_error;
+	
+	public:
+		static const Reticulum& get_instance();
 
 	public:
 		Reticulum(Type::NoneConstructor none) {
@@ -68,6 +75,19 @@ namespace RNS {
 		void persist_data();
 		void clean_caches();
 		void clear_caches();
+
+		//void __create_default_config();
+		//void rpc_loop();
+		//void get_interface_stats();
+		const std::map<Bytes, Transport::DestinationEntry>& get_path_table();
+		const std::map<Bytes, Transport::RateEntry>& get_rate_table();
+		bool drop_path(const Bytes& destination);
+		uint16_t drop_all_via(const Bytes& transport_hash);
+		void drop_announce_queues();
+		std::string get_next_hop_if_name(const Bytes& destination);
+		double get_first_hop_timeout(const Bytes& destination);
+		Bytes get_next_hop(const Bytes& destination);
+		size_t get_link_count();
 
 		/*
 		Returns whether proofs sent are explicit or implicit.

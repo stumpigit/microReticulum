@@ -468,7 +468,7 @@ void Packet::prove(const Destination& destination /*= {Type::NONE}*/) {
 		}
 	}
 	else if (_object->_fromPacked && _object->_link) {
-		_object->_link.prove_packet(*this);
+		_object->_link->prove_packet(*this);
 	}
 	else {
 		ERROR("Could not prove packet associated with neither a destination nor a link");
@@ -768,7 +768,9 @@ PacketReceipt::PacketReceipt(const Packet& packet) : _object(new Object()) {
 // Validate a proof packet
 bool PacketReceipt::validate_proof_packet(const Packet& proof_packet) {
 	if (proof_packet.link()) {
-		return validate_link_proof(proof_packet.data(), proof_packet.link(), proof_packet);
+		return validate_link_proof(proof_packet.data(), *proof_packet.link(), proof_packet);
+		return true;
+		
 	}
 	else {
 		return validate_proof(proof_packet.data(), proof_packet);

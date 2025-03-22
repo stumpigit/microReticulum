@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Destination.h"
-#include "Link.h"
 #include "Interface.h"
 #include "Bytes.h"
 #include "Log.h"
@@ -18,6 +17,7 @@ namespace RNS {
 	class ProofDestination;
 	class PacketReceipt;
 	class Packet;
+	class Link;
 
 	class ProofDestination : public Destination {
 	public:
@@ -205,8 +205,11 @@ namespace RNS {
 		// getters/setters
 		inline const Destination& destination() const { assert(_object); return _object->_destination; }
 		inline void destination(const Destination& destination) { assert(_object); _object->_destination = destination; }
-		inline const Link& link() const { assert(_object); return _object->_link; }
-		inline void link(const Link& link) { assert(_object); _object->_link = link; }
+		inline const Link* link() const { assert(_object); return _object->_link; }
+		inline void link(Link& link) { 
+			// CS TODO
+			assert(_object); _object->_link = (Link *)&link;
+		}
 		inline const Interface& attached_interface() const { assert(_object); return _object->_attached_interface; }
 		inline const Interface& receiving_interface() const { assert(_object); return _object->_receiving_interface; }
 		inline void receiving_interface(const Interface& receiving_interface) { assert(_object); _object->_receiving_interface = receiving_interface; }
@@ -248,7 +251,7 @@ namespace RNS {
 			virtual ~Object() { MEM("Identity::Data object destroyed, this: " + std::to_string((uintptr_t)this)); }
 		private:
 			Destination _destination = {Type::NONE};
-			Link _link = {Type::NONE};
+			Link *_link;
 
 			Interface _attached_interface = {Type::NONE};
 			Interface _receiving_interface = {Type::NONE};

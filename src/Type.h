@@ -157,8 +157,8 @@ namespace RNS { namespace Type {
 
 	namespace Link {
 
-		static constexpr const char* CURVE = Identity::CURVE;
 		// The curve used for Elliptic Curve DH key exchanges
+		static constexpr const char* CURVE = Identity::CURVE;
 
 		static const uint16_t ECPUBSIZE         = 32+32;
 		static const uint8_t KEYSIZE           = 32;
@@ -166,17 +166,16 @@ namespace RNS { namespace Type {
 		//static const uint16_t MDU = floor((Reticulum::MTU-Reticulum::IFAC_MIN_SIZE-Reticulum::HEADER_MINSIZE-Identity::FERNET_OVERHEAD)/Identity::AES128_BLOCKSIZE)*Identity::AES128_BLOCKSIZE - 1;
 		static const uint16_t MDU = ((Reticulum::MTU-Reticulum::IFAC_MIN_SIZE-Reticulum::HEADER_MINSIZE-Identity::FERNET_OVERHEAD)/Identity::AES128_BLOCKSIZE)*Identity::AES128_BLOCKSIZE - 1;
 
-		static const uint8_t ESTABLISHMENT_TIMEOUT_PER_HOP = Reticulum::DEFAULT_PER_HOP_TIMEOUT;
 		// Timeout for link establishment in seconds per hop to destination.
+		static const uint8_t ESTABLISHMENT_TIMEOUT_PER_HOP = Reticulum::DEFAULT_PER_HOP_TIMEOUT;
 
+		// RTT timeout factor used in link timeout calculation.
 		static const uint16_t TRAFFIC_TIMEOUT_FACTOR = 6;
 		static const uint16_t KEEPALIVE_TIMEOUT_FACTOR = 4;
-		// RTT timeout factor used in link timeout calculation.
-		static const uint8_t STALE_GRACE = 2;
 		// Grace period in seconds used in link timeout calculation.
-		static const uint16_t KEEPALIVE = 360;
+		static const uint8_t STALE_GRACE = 2;
 		// Interval for sending keep-alive packets on established links in seconds.
-		static const uint16_t STALE_TIME = 2*KEEPALIVE;
+		static const uint16_t KEEPALIVE = 360;
 		/*
 		If no traffic or keep-alive packets are received within this period, the
 		link will be marked as stale, and a final keep-alive packet will be sent.
@@ -184,6 +183,7 @@ namespace RNS { namespace Type {
 		``KEEPALIVE_TIMEOUT_FACTOR`` + ``STALE_GRACE``, the link is considered timed out,
 		and will be torn down.
 		*/
+		static const uint16_t STALE_TIME = 2*KEEPALIVE;
 
 		enum status {
 			PENDING   = 0x00,
@@ -193,16 +193,22 @@ namespace RNS { namespace Type {
 			CLOSED    = 0x04
 		};
 
-		enum teardown_reasons {
+		enum teardown_reason {
 			TIMEOUT            = 0x01,
 			INITIATOR_CLOSED   = 0x02,
 			DESTINATION_CLOSED = 0x03,
 		};
 
-		enum resource_strategies {
+		enum resource_strategy {
 			ACCEPT_NONE = 0x00,
 			ACCEPT_APP  = 0x01,
 			ACCEPT_ALL  = 0x02,
+		};
+
+		enum state {
+			STATE_UNKNOWN        = 0x00,
+			STATE_UNRESPONSIVE   = 0x01,
+			STATE_RESPONSIVE     = 0x02,
 		};
 
 	}
@@ -315,28 +321,29 @@ namespace RNS { namespace Type {
 
 		static constexpr const char* APP_NAME = "rnstransport";
 
-		static const uint8_t PATHFINDER_M    = 128;       // Max hops
 		// Maximum amount of hops that Reticulum will transport a packet.
+		static const uint8_t PATHFINDER_M    = 128;       // Max hops
 
 		static const uint8_t PATHFINDER_R      = 1;          // Retransmit retries
 		static const uint8_t PATHFINDER_G      = 5;          // Retry grace period
-		static constexpr const float PATHFINDER_RW       = 0.5;        // Random window for announce rebroadcast
+		static constexpr const float PATHFINDER_RW     = 0.5;        // Random window for announce rebroadcast
 
 		// TODO: Calculate an optimal number for this in
 		// various situations
 		static const uint8_t LOCAL_REBROADCASTS_MAX = 2;          // How many local rebroadcasts of an announce is allowed
-
 		static const uint8_t PATH_REQUEST_TIMEOUT = 15;           // Default timuout for client path requests in seconds
 		static constexpr const float PATH_REQUEST_GRACE     = 0.35;         // Grace time before a path announcement is made, allows directly reachable peers to respond first
 		static const uint8_t PATH_REQUEST_RW      = 2;            // Path request random window
 		static const uint8_t PATH_REQUEST_MI      = 5;            // Minimum interval in seconds for automated path requests
 
-		static constexpr const float LINK_TIMEOUT            = Link::STALE_TIME * 1.25;
+		static constexpr const float LINK_TIMEOUT  = Link::STALE_TIME * 1.25;
 		static const uint16_t REVERSE_TIMEOUT      = 30*60;        // Reverse table entries are removed after 30 minutes
 		// CBA MCU
 		//static const uint16_t MAX_RECEIPTS         = 1024;         // Maximum number of receipts to keep track of
 		static const uint16_t MAX_RECEIPTS         = 20;         // Maximum number of receipts to keep track of
 		static const uint8_t MAX_RATE_TIMESTAMPS   = 16;           // Maximum number of announce timestamps to keep per destination
+		static const uint8_t PERSIST_RANDOM_BLOBS  = 32;           // Maximum number of random blobs per destination to persist to disk
+		static const uint8_t MAX_RANDOM_BLOBS      = 64;           // Maximum number of random blobs per destination to keep in memory
 
 		// CBA MCU
 		//static const uint32_t DESTINATION_TIMEOUT = 60*60*24*7;   // Destination table entries are removed if unused for one week
@@ -348,6 +355,7 @@ namespace RNS { namespace Type {
 		static const uint32_t AP_PATH_TIME      = 60*60*6;   // Path expiration of 6 hours for Access Point paths
 		static const uint32_t ROAMING_PATH_TIME = 60*60*1;    // Path expiration of 1 hour for Roaming paths
 
+		static const uint16_t LOCAL_CLIENT_CACHE_MAXSIZE = 512;
 	}
 
 } }
