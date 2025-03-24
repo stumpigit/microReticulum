@@ -162,6 +162,7 @@ namespace RNS {
 
 		// getters/setters
 		inline Type::Destination::types type() const { assert(_object); return _object->_type; }
+		inline void type(Type::Destination::types type) const { assert(_object); _object->_type = type; }
 		inline Type::Destination::directions direction() const { assert(_object); return _object->_direction; }
 		inline Type::Destination::proof_strategies proof_strategy() const { assert(_object); return _object->_proof_strategy; }
 		inline const Bytes& hash() const { assert(_object); return _object->_hash; }

@@ -119,14 +119,17 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 			}*/
 			// Dummy: update_mdu() not implemented.
 			link->destination(packet.destination());
+			link->destination().type(RNS::Type::Destination::LINK);
+			TRACE("CS Destination" + packet.destination().toString());
+			if (link->destination().type() == RNS::Type::Destination::LINK) TRACE("Is link");
 			// CS TODO
 			//link->establishment_timeout = ESTABLISHMENT_TIMEOUT_PER_HOP * max(1, (int)packet->receiving_interface.size()) + KEEPALIVE;
 			//link->establishment_cost += packet->raw.size();
-			RNS::log("Validating link request " + link->link_id().toString(), RNS::LOG_DEBUG);
+			RNS::log("Validating link request " + link->link_id().toHex(), RNS::LOG_DEBUG);
 			//RNS::log("Link MTU configured to " + RNS::Identity().prettysize(link->mtu), RNS::LOG_EXTREME);
 			//RNS::log("Establishment timeout is " + RNS::Identity().prettytime(link->establishment_timeout) + " for incoming link request " + RNS::Identity().prettyhexrep(link->link_id), RNS::LOG_EXTREME);
 			// CS TODO
-			//link->handshake();
+			link->handshake();
 			link->attached_interface(packet.receiving_interface());
 			link->prove();
 			link->request_time(RNS::Utilities::OS::ltime());
@@ -158,16 +161,19 @@ void Link::receive(const Packet& packet) {
 }
 
 void Link::prove() {
-/*p TODO
-	signed_data = _object->_link_id+_object->_pub_bytes+_object->_sig_pub_bytes
-	signature = _object->_owner.identity.sign(signed_data)
+	RNS::Bytes signed_data = _object->_link_id+_object->_pub_bytes+_object->_sig_pub_bytes;
+	RNS::Bytes signature = owner().identity().sign(signed_data);
 
-	proof_data = signature+_object->_pub_bytes
-	proof = RNS.Packet(self, proof_data, packet_type=RNS.Packet.PROOF, context=RNS.Packet.LRPROOF)
-	proof.send()
-	_object->_establishment_cost += len(proof.raw)
-	_object->_had_outbound()
-*/
+	RNS::Bytes proof_data = signature+_object->_pub_bytes;
+
+	RNS::Packet proof = RNS::Packet(this->destination(), proof_data, RNS::Type::Packet::PROOF, RNS::Type::Packet::LRPROOF);
+	proof.link(*this);
+	proof.destination(this->destination());
+	TRACE(proof.dumpString());
+	proof.send();
+	_object->_establishment_cost += proof.raw().size();
+	// CS TODO
+	//_object->_had_outbound()
 }
 
 void Link::prove_packet(const Packet& packet) {
@@ -184,6 +190,25 @@ void Link::prove_packet(const Packet& packet) {
 	proof.send()
 	_object->_had_outbound()
 */
+}
+
+void Link::handshake() {
+	assert(_object);
+	if (_object->_status == RNS::Type::Link::PENDING && _object->_prv != nullptr) {
+		_object->_status = RNS::Type::Link::HANDSHAKE;
+		/*_object->_shared_key = _object->_prv->exchange(_object->_peer_pub);
+
+		_object->_derived_key = RNS::Cryptography::hkdf(
+			length=32,
+			derive_from=_object->_shared_key,
+			salt=_object->_get_salt(),
+			context=_object->_get_context(),
+		)*/
+	}
+	else {
+		// CS TODO
+		//RNS.log("Handshake attempt on "+ +" with invalid state "+str(_object->_status), RNS.LOG_ERROR)
+	}
 }
 
 /*p TODO

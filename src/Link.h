@@ -93,6 +93,8 @@ namespace RNS {
 		// getters/setters
 		inline const Destination& destination() const { assert(_object); return _object->_destination; }
 		inline void destination(const Destination& destination) { assert(_object); _object->_destination = destination; }
+		inline const Destination& owner() const { assert(_object); return _object->_owner; }
+		inline void owner(const Destination& owner) { assert(_object); _object->_owner = owner; }
 		inline const Bytes& link_id() const { assert(_object); return _object->_link_id; }
 		inline const Bytes& hash() const { assert(_object); return _object->_hash; }
 		inline Type::Link::status status() const { assert(_object); return _object->_status; }
@@ -102,11 +104,16 @@ namespace RNS {
 		inline void request_time(uint64_t request_time) { assert(_object); _object->_request_time = request_time; }
 		inline const uint64_t last_inbound() const { assert(_object); return _object->_last_inbound; }
 		inline void last_inbound(uint64_t last_inbound) { assert(_object); _object->_last_inbound = last_inbound; }
+		inline const uint64_t tx() const { assert(_object); return _object->_tx; }
+		inline void tx(int tx) { assert(_object); _object->_tx = tx; }
+		inline const uint64_t txbytes() const { assert(_object); return _object->_txbytes; }
+		inline void txbytes(int txbytes) { assert(_object); _object->_txbytes = txbytes; }
 		
 
 		inline std::string toString() const { if (!_object) return ""; return "{Link: unknown}"; }
 
 		static RNS::Link* validate_request(const Destination &owner, const Bytes& data, const Packet& packet);
+		void handshake();
 		static bool truerequest(const Destination &owner, const Bytes& data, const Packet& packet);
 
 	private:

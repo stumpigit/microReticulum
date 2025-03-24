@@ -255,8 +255,8 @@ void Packet::pack() {
 	_object->_raw << _object->_hops;
 
 	if (_object->_context == LRPROOF) {
-		TRACE("Packet::pack: destination link id: " + _object->_destination.link_id().toHex() );
-		_object->_raw << _object->_destination.link_id();
+		TRACE("Packet::pack: destination link id: " + _object->_link->link_id().toHex() );
+		_object->_raw << _object->_link->link_id();
 		_object->_raw << (uint8_t)_object->_context;
 		_object->_raw << _object->_data;
 	}
@@ -396,18 +396,19 @@ bool Packet::send() {
         throw std::logic_error("Packet was already sent");
 	}
 // TODO
-/*
-	if (_destination->type == RNS::Destination::LINK) {
-		if (_destination->status == Type::Link::CLOSED) {
+
+	if (destination().type() == RNS::Type::Destination::LINK) {
+		TRACE("Is link Packet");
+		if (destination().status() == Type::Link::CLOSED) {
             throw std::runtime_error("Attempt to transmit over a closed link");
 		}
 		else {
-			_destination->last_outbound = time();
-			_destination->tx += 1;
-			_destination->txbytes += _data_len;
+			_object->_link->last_inbound(OS::ltime());
+			_object->_link->tx(_object->_link->tx() + 1);
+			_object->_link->txbytes(_object->_link->txbytes() + data().size());
 		}
 	}
-*/
+
 
 	if (!_object->_packed) {
 		pack();
