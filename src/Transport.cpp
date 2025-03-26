@@ -2497,8 +2497,6 @@ TRACE("CS1_3");
 }
 
 /*static*/ void Transport::register_link(const Link& link) {
-// CS TODO
-/*
 	TRACE("Transport: Registering link " + link.toString());
 	if (link.initiator()) {
 		// CBA ACCUMULATES
@@ -2508,7 +2506,6 @@ TRACE("CS1_3");
 		// CBA ACCUMULATES
 		_active_links.insert(link);
 	}
-*/
 }
 
 /*static*/ void Transport::activate_link(Link& link) {

@@ -193,7 +193,7 @@ namespace RNS {
 		bool unpack();
 		bool send();
 		bool resend();
-		void prove(const Destination& destination = {Type::NONE});
+		void prove (const Destination& destination = {Type::NONE}) const;
 		ProofDestination generate_proof_destination() const;
 		bool validate_proof_packet(const Packet& proof_packet);
 		bool validate_proof(const Bytes& proof);

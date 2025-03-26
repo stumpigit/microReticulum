@@ -41,19 +41,19 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 
 	// CS TODO
 	//_object->_fernet  = None
-
 	_object->_pub = _object->_prv->public_key();
 	_object->_pub_bytes = _object->_pub->public_bytes();
 
 	_object->_sig_pub = _object->_sig_prv->public_key();
 	_object->_sig_pub_bytes = _object->_sig_pub->public_bytes();
 
-	if (!peer_pub_bytes.empty())
-		_object->_peer_pub = nullptr;
-		//_object->_peer_pub_bytes = None
-	else
-		// CS TODO
-		// _object->_load_peer(peer_pub_bytes, peer_sig_pub_bytes)
+	//if (!peer_pub_bytes.empty()) {
+		//_object->_peer_pub = nullptr;
+		//_object->_peer_pub_bytes = 0;
+	//}
+	//else {
+		load_peer(peer_pub_bytes, peer_sig_pub_bytes);
+	//}
 
 	if (established_callback != nullptr)
 		// CS TODO
@@ -101,9 +101,11 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 			const size_t half = ECPUBSIZE / 2;
             // CS TODO
 			//std::vector<uint8_t> peer_pub_bytes(data->begin(), data.begin() + half);
-            //std::vector<uint8_t> peer_sig_pub_bytes(data.begin() + half, data.end());
-			Link* link = new Link({Type::NONE}, nullptr, nullptr, owner, data, data);
-			
+			 //std::vector<uint8_t> peer_sig_pub_bytes(data.begin() + half, data.end());
+			Bytes peer_pub_bytes = data.left(half);
+			Bytes peer_sig_pub_bytes = data.mid(half);
+           
+			Link* link = new Link({Type::NONE}, nullptr, nullptr, owner, peer_pub_bytes, peer_sig_pub_bytes);
 
 			link->set_link_id(packet);
 			/*if(data.size() == (size_t)(ECPUBSIZE + LINK_MTU_SIZE)) {
@@ -142,7 +144,8 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 			RNS::log("Incoming link request " + link->link_id().toHex() + " accepted on " + link->attached_interface().toString(), RNS::LOG_DEBUG);
 			return link;
 		} catch (const std::exception& e) {
-			RNS::log("Validating link request failed: ", RNS::LOG_VERBOSE);
+
+			RNS::log("Validating link request failed: "  + std::string(e.what()));
 			return nullptr;
 		}
 	} else {
@@ -158,6 +161,278 @@ void Link::set_link_id(const Packet& packet) {
 }
 
 void Link::receive(const Packet& packet) {
+	RNS::log("Incoming link receive", RNS::LOG_DEBUG);
+	assert(_object);
+	//_object->_watchdog_lock = true;
+	if (!(_object->_status == RNS::Type::Link::CLOSED) && !(_object->_initiator && packet.context() == RNS::Type::Packet::KEEPALIVE && packet.data().compare(0xFF))) {
+		if (packet.receiving_interface() != _object->_attached_interface) {
+			RNS::log("Link-associated packet received on unexpected interface! Someone might be trying to manipulate your communication!", RNS::LOG_ERROR);
+		} else {
+			
+			RNS::log("R1", RNS::LOG_DEBUG);
+			_object->_last_inbound = RNS::Utilities::OS::ltime();
+			if (packet.context() != RNS::Type::Packet::KEEPALIVE) {
+				_object->_last_data = _object->_last_inbound;
+			}
+			_object->_rx += 1;
+			_object->_rxbytes += packet.data().size();
+			if (_object->_status == RNS::Type::Link::STALE) {
+				_object->_status = RNS::Type::Link::ACTIVE;
+			}
+
+			if (packet.packet_type() == RNS::Type::Packet::DATA) {
+				RNS::log("R2", RNS::LOG_DEBUG);
+				bool should_query = false;
+				if (packet.context() == RNS::Type::NONE) {
+					std::string plaintext = decrypt(packet.data()).toString();
+					RNS::log("R3: " + plaintext, RNS::LOG_DEBUG);
+					if (!plaintext.empty()) {
+						if (callbacks()._packet != nullptr) {
+							//thread thread_obj([=]() {
+								callbacks()._packet(plaintext, packet);
+							//});
+							//thread_obj.detach();
+						}
+						// CS TODO
+						/*
+						if (destination().proof_strategy() == RNS::Type::Destination::PROVE_ALL) {
+							packet.prove(destination());
+							should_query = true;
+						} else if (_object->_destination.proof_strategy == RNS::Type::Destination::PROVE_APP) {
+							if (_object->_destination.callbacks.proof_requested) {
+								try {
+									if (_object->_destination.callbacks.proof_requested(packet)) {
+										packet.prove();
+										should_query = true;
+									}
+								} catch (exception &e) {
+									RNS::log("Error while executing proof request callback from " + string(typeid(*this).name()) + ". The contained exception was: " + e.what(), RNS::LOG_ERROR);
+								}
+							}
+						}
+						_object->___update_phy_stats(packet, true);
+						*/
+					}
+				// CS TODO
+				/*
+				} else if (packet.context == RNS::Type::Packet::LINKIDENTIFY) {
+					vector<unsigned char> plaintext = _object->_decrypt(packet.data);
+					if (!plaintext.empty()) {
+						if (!_object->_initiator && plaintext.size() == (RNS::Type::Identity::KEYSIZE/8 + RNS::Type::Identity::SIGLENGTH/8)) {
+							vector<unsigned char> public_key(plaintext.begin(), plaintext.begin() + RNS::Type::Identity::KEYSIZE/8);
+							vector<unsigned char> signed_data = _object->___remote_identity.hash; // Using ___remote_identity.hash as placeholder for _link_id concatenation
+							signed_data.insert(signed_data.end(), public_key.begin(), public_key.end());
+							vector<unsigned char> signature(plaintext.begin() + RNS::Type::Identity::KEYSIZE/8, plaintext.begin() + RNS::Type::Identity::KEYSIZE/8 + RNS::Type::Identity::SIGLENGTH/8);
+							RNS::Identity identity(false);
+							identity.load_public_key(public_key);
+							if (identity.validate(signature, signed_data)) {
+								_object->___remote_identity = identity;
+								if (_object->_callbacks.remote_identified) {
+									try {
+										_object->_callbacks.remote_identified(this, _object->___remote_identity);
+									} catch (exception &e) {
+										RNS::log("Error while executing remote identified callback from " + string(typeid(*this).name()) + ". The contained exception was: " + e.what(), RNS::LOG_ERROR);
+									}
+								}
+								_object->___update_phy_stats(packet, true);
+							}
+						}
+					}
+				} else if (packet.context == RNS::Type::Packet::REQUEST) {
+					try {
+						vector<unsigned char> request_id_bytes = packet.getTruncatedHash();
+						int request_id = 0; // Dummy conversion from truncated hash to integer
+						vector<unsigned char> packed_request = _object->_decrypt(packet.data);
+						if (!packed_request.empty()) {
+							vector<unsigned char> unpacked_request = umsgpack::unpackb(packed_request);
+							_object->_handle_request(request_id, unpacked_request);
+							_object->___update_phy_stats(packet, true);
+						}
+					} catch (exception &e) {
+						RNS::log("Error occurred while handling request. The contained exception was: " + string(e.what()), RNS::LOG_ERROR);
+					}
+				} else if (packet.context == RNS::Type::Packet::RESPONSE) {
+					try {
+						vector<unsigned char> packed_response = _object->_decrypt(packet.data);
+						if (!packed_response.empty()) {
+							vector<unsigned char> unpacked_response = umsgpack::unpackb(packed_response);
+							int request_id = 0;
+							if (unpacked_response.size() >= 2) {
+								request_id = unpacked_response[0];
+								vector<unsigned char> response_data(unpacked_response.begin()+1, unpacked_response.end());
+								vector<unsigned char> packed = umsgpack::packb(response_data);
+								int transfer_size = packed.size() - 2;
+								_object->_handle_response(request_id, response_data, transfer_size, transfer_size);
+								_object->___update_phy_stats(packet, true);
+							}
+						}
+					} catch (exception &e) {
+						RNS::log("Error occurred while handling response. The contained exception was: " + string(e.what()), RNS::LOG_ERROR);
+					}
+				} else if (packet.context == RNS::Type::Packet::LRRTT) {
+					if (! _object->_initiator) {
+						_object->_rtt_packet(packet);
+						_object->___update_phy_stats(packet, true);
+					}
+				} else if (packet.context == RNS::Type::Packet::LINKCLOSE) {
+					_object->_teardown_packet(packet);
+					_object->___update_phy_stats(packet, true);
+				}
+				*/
+				/* else if (packet.context == RNS::Type::Packet::RESOURCE_ADV) {
+					packet.plaintext = _object->_decrypt(packet.data);
+					if (!packet.plaintext.empty()) {
+						_object->___update_phy_stats(packet, true);
+						if (RNS::ResourceAdvertisement::is_request(packet)) {
+							RNS::log("Resource advertisement request processing", RNS::LOG_DEBUG);
+							// Accepting resource advertisement via callback
+							if (_object->_callbacks.resource_concluded)
+								_object->_callbacks.resource_concluded(packet);
+						} else if (RNS::ResourceAdvertisement::is_response(packet)) {
+							int request_id = RNS::ResourceAdvertisement::read_request_id(packet);
+							for (auto pending_request = _object->_pending_requests.begin(); pending_request != _object->_pending_requests.end(); ++pending_request) {
+								if (pending_request->request_id == request_id) {
+									RNS::Resource* response_resource = nullptr;
+									if (_object->_callbacks.resource_concluded)
+										_object->_callbacks.resource_concluded(packet);
+									response_resource = new RNS::Resource();
+									if (pending_request->response_size == -1) {
+										pending_request->response_size = RNS::ResourceAdvertisement::read_size(packet);
+									}
+									pending_request->response_transfer_size += RNS::ResourceAdvertisement::read_transfer_size(packet);
+									if (pending_request->started_at == 0) {
+										pending_request->started_at = time(nullptr);
+									}
+									pending_request->response_resource_progress(response_resource);
+									delete response_resource;
+								}
+							}
+						} else if (_object->_resource_strategy == RNS::Type::Link::ACCEPT_NONE) {
+							// pass
+						} else if (_object->_resource_strategy == RNS::Type::Link::ACCEPT_APP) {
+							if (_object->_callbacks.resource) {
+								try {
+									RNS::ResourceAdvertisement resource_advertisement = RNS::ResourceAdvertisement::unpack(packet.plaintext);
+									packet.link = this;
+									if (_object->_callbacks.resource(resource_advertisement)) {
+										if (_object->_callbacks.resource_concluded)
+											_object->_callbacks.resource_concluded(packet);
+									}
+								} catch (exception &e) {
+									RNS::log("Error while executing resource accept callback from " + string(typeid(*this).name()) + ". The contained exception was: " + e.what(), RNS::LOG_ERROR);
+								}
+							}
+						} else if (_object->_resource_strategy == Link::ACCEPT_ALL) {
+							if (_object->_callbacks.resource_concluded)
+								_object->_callbacks.resource_concluded(packet);
+						}
+					}
+				} else if (packet.context == RNS::Type::Packet::RESOURCE_REQ) {
+					vector<unsigned char> plaintext = _object->_decrypt(packet.data);
+					if (!plaintext.empty()) {
+						_object->___update_phy_stats(packet, true);
+						vector<unsigned char> resource_hash;
+						if (!plaintext.empty() && (int)plaintext[0] == RNS::Resource::HASHMAP_IS_EXHAUSTED) {
+							if (plaintext.size() >= 1 + RNS::Resource::MAPHASH_LEN + RNS::Identity::HASHLENGTH/8) {
+								resource_hash = vector<unsigned char>(plaintext.begin() + 1 + RNS::Resource::MAPHASH_LEN,
+																		plaintext.begin() + 1 + RNS::Resource::MAPHASH_LEN + RNS::Identity::HASHLENGTH/8);
+							}
+						} else {
+							if (plaintext.size() >= 1 + RNS::Identity::HASHLENGTH/8) {
+								resource_hash = vector<unsigned char>(plaintext.begin() + 1, plaintext.begin() + 1 + RNS::Identity::HASHLENGTH/8);
+							}
+						}
+						for (auto resource : _object->_outgoing_resources) {
+							if (resource->hash == resource_hash) {
+								// We need to check that this request has not been
+								// received before in order to avoid sequencing errors.
+								bool found = false;
+								for (auto &hash_val : resource->req_hashlist) {
+									if (hash_val == packet.packet_hash) {
+										found = true;
+										break;
+									}
+								}
+								if (!found) {
+									resource->req_hashlist.push_back(packet.packet_hash);
+									resource->request(plaintext);
+								}
+							}
+						}
+					}
+				} else if (packet.context == RNS::Packet::RESOURCE_HMU) {
+					vector<unsigned char> plaintext = _object->_decrypt(packet.data);
+					if (!plaintext.empty()) {
+						_object->___update_phy_stats(packet, true);
+						vector<unsigned char> resource_hash;
+						if (plaintext.size() >= (size_t)RNS::Identity::HASHLENGTH/8) {
+							resource_hash = vector<unsigned char>(plaintext.begin(), plaintext.begin() + RNS::Identity::HASHLENGTH/8);
+						}
+						for (auto resource : _object->_incoming_resources) {
+							if (resource_hash == resource->hash) {
+								resource->hashmap_update_packet(plaintext);
+							}
+						}
+					}
+				} else if (packet.context == RNS::Packet::RESOURCE_ICL) {
+					vector<unsigned char> plaintext = _object->_decrypt(packet.data);
+					if (!plaintext.empty()) {
+						_object->___update_phy_stats(packet);
+						vector<unsigned char> resource_hash;
+						if (plaintext.size() >= (size_t)RNS::Identity::HASHLENGTH/8) {
+							resource_hash = vector<unsigned char>(plaintext.begin(), plaintext.begin() + RNS::Identity::HASHLENGTH/8);
+						}
+						for (auto resource : _object->_incoming_resources) {
+							if (resource_hash == resource->hash) {
+								resource->cancel();
+							}
+						}
+					}*/
+				} else if (packet.context() == RNS::Type::Packet::KEEPALIVE) {
+					if (! _object->_initiator && packet.data().compare(0xFF)) {
+						RNS::Packet keepalive_packet = RNS::Packet(this->destination(), 0xFE, RNS::Type::Packet::DATA, RNS::Type::Packet::KEEPALIVE);
+						keepalive_packet.send();
+						had_outbound();
+					}
+				}
+				// TODO: find the most efficient way to allow multiple
+				// transfers at the same time, sending resource hash on
+				// each packet is a huge overhead. Probably some kind
+				// of hash -> sequence map
+				/*else if (packet.context == RNS::Packet::RESOURCE) {
+					for (auto resource : _object->_incoming_resources) {
+						resource->request(packet.data); // Using request as a placeholder for receive_part
+						_object->___update_phy_stats(packet);
+					}
+				} else if (packet.context == RNS::Packet::CHANNEL) {
+					if (!_object->__channel) {
+						RNS::log("Channel data received without open channel", RNS::LOG_DEBUG);
+					} else {
+						packet.prove();
+						vector<unsigned char> plaintext = _object->_decrypt(packet.data);
+						if (!plaintext.empty()) {
+							_object->___update_phy_stats(packet);
+							_object->__channel->_receive(plaintext);
+						}
+					}*/
+			
+			} else if (packet.packet_type() == RNS::Type::Packet::PROOF) {
+				if (packet.context() == RNS::Type::Packet::RESOURCE_PRF) {
+					/*vector<unsigned char> resource_hash;
+					if (packet.data.size() >= (size_t)RNS::Identity::HASHLENGTH/8) {
+						resource_hash = vector<unsigned char>(packet.data.begin(), packet.data.begin() + RNS::Identity::HASHLENGTH/8);
+					}
+					for (auto resource : _object->_outgoing_resources) {
+						if (resource_hash == resource->hash) {
+							resource->validate_proof(packet.data);
+							_object->___update_phy_stats(packet, true);
+						}
+					}*/
+				}
+			}
+		}
+	}
+	_object->_watchdog_lock = false;
 }
 
 void Link::prove() {
@@ -196,19 +471,83 @@ void Link::handshake() {
 	assert(_object);
 	if (_object->_status == RNS::Type::Link::PENDING && _object->_prv != nullptr) {
 		_object->_status = RNS::Type::Link::HANDSHAKE;
-		/*_object->_shared_key = _object->_prv->exchange(_object->_peer_pub);
+		RNS::Cryptography::X25519PublicKey public_bytes = *peer_pub().get();
+		// CS TODO Check
+		_object->_shared_key = _object->_prv->exchange(public_bytes.public_bytes());
 
 		_object->_derived_key = RNS::Cryptography::hkdf(
-			length=32,
-			derive_from=_object->_shared_key,
-			salt=_object->_get_salt(),
-			context=_object->_get_context(),
-		)*/
+			32,
+			_object->_shared_key,
+			get_salt()
+		);
 	}
 	else {
 		// CS TODO
-		//RNS.log("Handshake attempt on "+ +" with invalid state "+str(_object->_status), RNS.LOG_ERROR)
+		RNS::log("Handshake attempt on with invalid state ", RNS::LOG_ERROR);
 	}
+}
+
+// The encrypt method translated from Python code.
+const Bytes Link::encrypt(const Bytes& data) {
+	assert(_object);
+
+	Cryptography::Fernet fernet = Cryptography::Fernet(_object->_derived_key);
+	return fernet.encrypt(data);
+}
+
+
+/*
+	try {
+		if (fernet()==RNS::Type::NONE) {
+			try {
+				fernet(new Fernet(_derived_key));
+			} catch (const std::exception &e) {
+				RNS::log("Could not instantiate Fernet while performin encryption on link " +
+							  std::to_string(reinterpret_cast<uintptr_t>(this)) +
+							  ". The contained exception was: " + e.what(), RNS::LOG_ERROR);
+				throw e;
+			}
+		}
+		return fernet()->encrypt(plaintext);
+	} catch (const std::exception &e) {
+		RNS::log("Encryption on link " + std::to_string(reinterpret_cast<uintptr_t>(this)) +
+					 " failed. The contained exception was: " + e.what(), RNS::LOG_ERROR);
+		throw e;
+	}
+}
+*/
+// The decrypt method translated from Python code.
+const Bytes Link::decrypt(const Bytes& token) {
+	assert(_object);
+	/*try {
+		if (!_object._fernet) {
+			_fernet = new Fernet(_derived_key);
+		}
+		return _fernet->decrypt(ciphertext);
+	} catch (const std::exception &e) {
+		RNS::log("Decryption failed on link " + std::to_string(reinterpret_cast<uintptr_t>(this)) +
+					 ". The contained exception was: " + e.what(), RNS::LOG_ERROR);
+		return ""; // Returning empty string to mimic Python's None for error case
+	}*/
+
+	Cryptography::Fernet fernet = Cryptography::Fernet(_object->_derived_key);
+	return fernet.decrypt(token);
+}
+
+void Link::load_peer(const Bytes& peer_pub_bytes, const Bytes& peer_sig_pub_bytes) {
+	assert(_object);
+	_object->_peer_pub_bytes = peer_pub_bytes;
+	
+	DEBUG("CS5");
+	RNS::Cryptography::X25519PublicKey::Ptr  x = Cryptography::X25519PublicKey::from_public_bytes(_object->_peer_pub_bytes);
+	peer_pub(x);
+
+	_object->_peer_sig_pub_bytes = peer_sig_pub_bytes;
+	_object->_peer_sig_pub = Cryptography::Ed25519PublicKey::from_public_bytes(_object->_peer_sig_pub_bytes);
+
+	// CS TODO
+	//if not hasattr(_object->_peer_pub, "curve"):
+	//	_object->_peer_pub.curve = Link.CURVE
 }
 
 /*p TODO

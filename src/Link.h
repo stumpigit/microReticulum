@@ -5,6 +5,8 @@
 #include "Identity.h"
 #include "Bytes.h"
 #include "Type.h"
+#include "Cryptography/Fernet.h"
+#include "Cryptography/HKDF.h"
 
 #include <memory>
 #include <cassert>
@@ -96,6 +98,7 @@ namespace RNS {
 		inline const Destination& owner() const { assert(_object); return _object->_owner; }
 		inline void owner(const Destination& owner) { assert(_object); _object->_owner = owner; }
 		inline const Bytes& link_id() const { assert(_object); return _object->_link_id; }
+		inline const Bytes& get_salt() const { assert(_object); return _object->_link_id; }
 		inline const Bytes& hash() const { assert(_object); return _object->_hash; }
 		inline Type::Link::status status() const { assert(_object); return _object->_status; }
 		inline const Interface& attached_interface() const { assert(_object); return _object->_attached_interface; }
@@ -108,18 +111,26 @@ namespace RNS {
 		inline void tx(int tx) { assert(_object); _object->_tx = tx; }
 		inline const uint64_t txbytes() const { assert(_object); return _object->_txbytes; }
 		inline void txbytes(int txbytes) { assert(_object); _object->_txbytes = txbytes; }
-		
+		inline const bool initiator() const { assert(_object); return _object->_initiator; }
+		inline void initiator(bool initiator) { assert(_object); _object->_initiator = initiator; }
+		inline const Callbacks callbacks() const { assert(_object); return _object->_callbacks; }
+		inline void callbacks(Callbacks callbacks) { assert(_object); _object->_callbacks = callbacks; }
+		inline const RNS::Cryptography::X25519PublicKey::Ptr peer_pub() const { assert(_object); return _object->_peer_pub; }
+		inline void peer_pub(RNS::Cryptography::X25519PublicKey::Ptr peer_pub) { assert(_object); _object->_peer_pub = peer_pub; }
 
 		inline std::string toString() const { if (!_object) return ""; return "{Link: unknown}"; }
 
 		static RNS::Link* validate_request(const Destination &owner, const Bytes& data, const Packet& packet);
 		void handshake();
 		static bool truerequest(const Destination &owner, const Bytes& data, const Packet& packet);
+		const Bytes encrypt(const Bytes& data);
+		const Bytes decrypt(const Bytes& token);
+		void load_peer(const Bytes& peer_pub_bytes, const Bytes& peer_sig_pub_bytes);
 
 	private:
 		class Object {
 		public:
-			Object(const Destination& destination) : _destination(destination) {}
+			Object(const Destination& destination) : _destination(destination) {};
 			virtual ~Object() {}
 		private:
 			Destination _destination = {Type::NONE};
@@ -162,7 +173,7 @@ namespace RNS {
 			const Identity ___remote_identity = {Type::NONE};
 			bool ___track_phy_stats = false;
 
-			Cryptography::X25519PrivateKey::Ptr _peer_pub;
+			RNS::Cryptography::X25519PublicKey::Ptr _peer_pub;
 			Bytes _peer_pub_bytes;
 
 			//z const Channel __channel = {Type::NONE};
@@ -176,8 +187,15 @@ namespace RNS {
 			Cryptography::X25519PublicKey::Ptr _pub;
 			Bytes _pub_bytes;
 
+			Bytes _shared_key;
+
 			Cryptography::Ed25519PublicKey::Ptr _sig_pub;
 			Bytes _sig_pub_bytes;
+
+			Cryptography::Ed25519PublicKey::Ptr _peer_sig_pub;
+			Bytes _peer_sig_pub_bytes;
+
+			Bytes _derived_key;
 
 			Bytes _request_data;
 			uint64_t _request_time;

@@ -457,7 +457,7 @@ bool Packet::resend() {
 	}
 }
 
-void Packet::prove(const Destination& destination /*= {Type::NONE}*/) {
+void Packet::prove(const Destination& destination /*= {Type::NONE}*/) const {
 	assert(_object);
 	TRACE("Packet::prove: proving packet...");
 	if (!_object->_destination) {

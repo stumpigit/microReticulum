@@ -137,7 +137,7 @@ void reticulum_setup() {
 
 		HEAD("Starting UDPInterface...", RNS::LOG_TRACE);
 		RNS::Interfaces::UDPInterface* const udp_interfaceimpl = static_cast<RNS::Interfaces::UDPInterface*>( udp_interface.get() );
-		udp_interfaceimpl->start("SuterSwisscom", "0808080808", 4242);
+		udp_interfaceimpl->start("wifi_ssid", "wifi_password", 4242);
 
 		HEAD("Creating Reticulum instance...", RNS::LOG_TRACE);
 		//RNS::Reticulum reticulum;
