@@ -395,9 +395,8 @@ bool Packet::send() {
 	if (_object->_sent) {
         throw std::logic_error("Packet was already sent");
 	}
-// TODO
-
-	if (destination().type() == RNS::Type::Destination::LINK) {
+	if (link()!=NULL) {
+	//if (destination().type() == RNS::Type::Destination::LINK) {
 		TRACE("Is link Packet");
 		if (destination().status() == Type::Link::CLOSED) {
             throw std::runtime_error("Attempt to transmit over a closed link");

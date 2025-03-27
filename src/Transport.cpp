@@ -2190,6 +2190,7 @@ TRACE("CS1_3");
 					// pending link
 					for (auto& link : _pending_links) {
 						if (link.link_id() == packet.destination_hash()) {
+							DEBUG("$$$$$$$$$$$ Validating Proof");
 							// TODO
 							//z link.validate_proof(packet);
 						}

@@ -40,7 +40,7 @@ namespace RNS {
 	public:
 		class Callbacks {
 		public:
-			using link_established = void(*)(const Link& link);
+			using link_established = void(*)(Link& link);
 			//using packet = void(*)(uint8_t* data, uint16_t data_len, Packet *packet);
 			using packet = void(*)(const Bytes& data, const Packet& packet);
 			using proof_requested = bool(*)(const Packet& packet);
@@ -55,10 +55,10 @@ namespace RNS {
 
 	public:
 		Destination(Type::NoneConstructor none) {
-			MEM("Destination NONE object created, this: " + std::to_string((uintptr_t)this));
+			DEBUG("Destination NONE object created, this: " + std::to_string((uintptr_t)this));
 		}
 		Destination(const Destination& destination) : _object(destination._object) {
-			MEM("Destination object copy created, this: " + std::to_string((uintptr_t)this) + ", data: " + std::to_string((uintptr_t)_object.get()));
+			DEBUG("Destination object copy created, this: " + std::to_string((uintptr_t)this) + ", data: " + std::to_string((uintptr_t)_object.get()));
 		}
 		Destination(
 			const Identity& identity,
@@ -77,7 +77,7 @@ namespace RNS {
 
 		inline Destination& operator = (const Destination& destination) {
 			_object = destination._object;
-			MEM("Destination object copy created by assignment, this: " + std::to_string((uintptr_t)this) + ", data: " + std::to_string((uintptr_t)_object.get()));
+			DEBUG("Destination object copy created by assignment, this: " + std::to_string((uintptr_t)this) + ", data: " + std::to_string((uintptr_t)_object.get()));
 			return *this;
 		}
 		inline operator bool() const {

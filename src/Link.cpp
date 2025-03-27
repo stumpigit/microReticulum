@@ -57,7 +57,7 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 
 	if (established_callback != nullptr)
 		// CS TODO
-		// _object->_set_link_established_callback(established_callback);
+		_object->_callbacks._established=established_callback;
 
 	if (closed_callback != nullptr)
 		// CS TODO
@@ -120,10 +120,15 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 				}
 			}*/
 			// Dummy: update_mdu() not implemented.
-			link->destination(packet.destination());
-			link->destination().type(RNS::Type::Destination::LINK);
-			TRACE("CS Destination" + packet.destination().toString());
-			if (link->destination().type() == RNS::Type::Destination::LINK) TRACE("Is link");
+			// copy Destination, because now it is a link destination
+			Destination d = Destination(packet.destination());
+			link->destination(d);
+			
+			// CS TODO --> Set destination to link somehow
+			//link->destination().type(RNS::Type::Destination::LINK);
+			//TRACE("CS Destination" + packet.destination().toString());
+			//if (link->destination().type() == RNS::Type::Destination::LINK) TRACE("Is link");
+			
 			// CS TODO
 			//link->establishment_timeout = ESTABLISHMENT_TIMEOUT_PER_HOP * max(1, (int)packet->receiving_interface.size()) + KEEPALIVE;
 			//link->establishment_cost += packet->raw.size();
@@ -212,7 +217,7 @@ void Link::receive(const Packet& packet) {
 						}
 						_object->___update_phy_stats(packet, true);
 						*/
-					}
+					} 
 				// CS TODO
 				/*
 				} else if (packet.context == RNS::Type::Packet::LINKIDENTIFY) {
@@ -268,12 +273,12 @@ void Link::receive(const Packet& packet) {
 						}
 					} catch (exception &e) {
 						RNS::log("Error occurred while handling response. The contained exception was: " + string(e.what()), RNS::LOG_ERROR);
-					}
-				} else if (packet.context == RNS::Type::Packet::LRRTT) {
+					}*/
+				} else if (packet.context() == RNS::Type::Packet::LRRTT) {
 					if (! _object->_initiator) {
-						_object->_rtt_packet(packet);
-						_object->___update_phy_stats(packet, true);
-					}
+						rtt_packet(packet);
+						//_object->___update_phy_stats(packet, true);
+					}/*
 				} else if (packet.context == RNS::Type::Packet::LINKCLOSE) {
 					_object->_teardown_packet(packet);
 					_object->___update_phy_stats(packet, true);
@@ -447,8 +452,7 @@ void Link::prove() {
 	TRACE(proof.dumpString());
 	proof.send();
 	_object->_establishment_cost += proof.raw().size();
-	// CS TODO
-	//_object->_had_outbound()
+	had_outbound();
 }
 
 void Link::prove_packet(const Packet& packet) {
@@ -722,29 +726,35 @@ def request(self, path, data = None, response_callback = None, failed_callback =
 			request_size = len(packed_request),
 		)
 
+*/
+void Link::rtt_packet(Packet packet) {
+	//try {
+		assert(_object);
+		uint64_t measured_rtt = RNS::Utilities::OS::ltime() - _object->_request_time;
+		Bytes plaintext = decrypt(packet.data());
+		DEBUG("Received RTT Packet");
+		if (!plaintext.empty()) {
+			//rtt = umsgpack.unpackb(plaintext)
+			//_object->_rtt = max(measured_rtt, rtt)
+			_object->_status = RNS::Type::Link::ACTIVE;
+			//_object->_activated_at = time.time()
 
-def rtt_packet(self, packet):
-	try:
-		measured_rtt = time.time() - _object->_request_time
-		plaintext = _object->_decrypt(packet.data)
-		if plaintext != None:
-			rtt = umsgpack.unpackb(plaintext)
-			_object->_rtt = max(measured_rtt, rtt)
-			_object->_status = Link.ACTIVE
-			_object->_activated_at = time.time()
+			//if _object->_rtt != None and _object->_establishment_cost != None and _object->_rtt > 0 and _object->_establishment_cost > 0:
+			//	_object->_establishment_rate = _object->_establishment_cost/_object->_rtt
 
-			if _object->_rtt != None and _object->_establishment_cost != None and _object->_rtt > 0 and _object->_establishment_cost > 0:
-				_object->_establishment_rate = _object->_establishment_cost/_object->_rtt
-
-			try:
-				if _object->_owner.callbacks.link_established != None:
-						_object->_owner.callbacks.link_established(self)
-			except Exception as e:
-				RNS.log("Error occurred in external link establishment callback. The contained exception was: "+str(e), RNS.LOG_ERROR)
-
-	except Exception as e:
-		RNS.log("Error occurred while processing RTT packet, tearing down link. The contained exception was: "+str(e), RNS.LOG_ERROR)
-		_object->_teardown()
+	//		try:
+				if (owner().callbacks()._link_established != nullptr) {
+					owner().callbacks()._link_established(*this);
+				}
+				//		_object->_owner.callbacks.link_established(self)
+	//		except Exception as e:
+	//			RNS.log("Error occurred in external link establishment callback. The contained exception was: "+str(e), RNS.LOG_ERROR)
+		}
+	//except Exception as e:
+	//	RNS.log("Error occurred while processing RTT packet, tearing down link. The contained exception was: "+str(e), RNS.LOG_ERROR)
+	//	_object->_teardown()
+}
+/*
 
 def track_phy_stats(self, track):
 	"""

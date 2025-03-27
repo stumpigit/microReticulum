@@ -251,7 +251,7 @@ namespace RNS {
 			virtual ~Object() { MEM("Identity::Data object destroyed, this: " + std::to_string((uintptr_t)this)); }
 		private:
 			Destination _destination = {Type::NONE};
-			Link *_link;
+			Link *_link = NULL;
 
 			Interface _attached_interface = {Type::NONE};
 			Interface _receiving_interface = {Type::NONE};

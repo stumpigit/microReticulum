@@ -86,6 +86,18 @@ void onPingPacket(const RNS::Bytes& data, const RNS::Packet& packet) {
 	INFO("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 }
 
+void onLinkPacket(const RNS::Bytes& plaintext, const RNS::Packet& packet) {
+	INFO("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+	INFO("Packet received: " + plaintext.toHex());
+	INFO("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");	
+}
+
+void onLinkEstablished(RNS::Link& link) {
+	INFO("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+	INFO("Link established: " + link.link_id());
+	INFO("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+	link.set_link_packet_callback(onLinkPacket);
+}
 
 RNS::Reticulum reticulum({RNS::Type::NONE});
 RNS::Identity identity({RNS::Type::NONE});
@@ -165,12 +177,13 @@ void reticulum_setup() {
 
 		HEAD("Creating Destination instance...", RNS::LOG_TRACE);
 		//RNS::Destination destination(identity, RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, "app", "aspects");
-		destination = RNS::Destination(identity, RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, "example_utilities", "fruits");
+		destination = RNS::Destination(identity, RNS::Type::Destination::IN, RNS::Type::Destination::SINGLE, "lxmf", "delivery");
 		// 23.0% (+0.4%)
 
 		// Register DATA packet callback
 		HEAD("Registering packet callback with Destination...", RNS::LOG_TRACE);
 		destination.set_packet_callback(onPacket);
+		destination.set_link_established_callback(onLinkEstablished);
 		destination.set_proof_strategy(RNS::Type::Destination::PROVE_ALL);
 
 		{

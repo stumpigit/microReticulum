@@ -120,12 +120,18 @@ namespace RNS {
 
 		inline std::string toString() const { if (!_object) return ""; return "{Link: unknown}"; }
 
+		inline void set_link_packet_callback(RNS::Link::Callbacks::packet callback) {
+			assert(_object);
+			_object->_callbacks._packet = callback;
+		}
+
 		static RNS::Link* validate_request(const Destination &owner, const Bytes& data, const Packet& packet);
 		void handshake();
 		static bool truerequest(const Destination &owner, const Bytes& data, const Packet& packet);
 		const Bytes encrypt(const Bytes& data);
 		const Bytes decrypt(const Bytes& token);
 		void load_peer(const Bytes& peer_pub_bytes, const Bytes& peer_sig_pub_bytes);
+		void rtt_packet(Packet packet);
 
 	private:
 		class Object {
