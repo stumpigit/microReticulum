@@ -23,12 +23,35 @@
 #include <stdio.h>
 #endif
 
+#include <iostream>
+#include <sstream>
+#include <chrono>
+#include <string>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string>
 #include <vector>
 #include <map>
 #include <functional>
+#define MSGPACK_DEBUGLOG_ENABLE
+#include <MsgPack.h>
+
+template < typename Type > std::string to_str (const Type & t)
+{
+  std::ostringstream os;
+  os << t;
+  return os.str ();
+}
+
+
+struct LXMFMsgPack {
+    float  timestamp;
+    MsgPack::bin_t<uint8_t> title;
+    MsgPack::bin_t<uint8_t> content;
+
+    MSGPACK_DEFINE(timestamp, title, content);
+};
+
 //#include <sstream>
 
 //#define RETICULUM_PACKET_TEST
@@ -89,6 +112,31 @@ void onPingPacket(const RNS::Bytes& data, const RNS::Packet& packet) {
 void onLinkPacket(const RNS::Bytes& plaintext, const RNS::Packet& packet) {
 	INFO("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
 	INFO("Packet received: " + plaintext.toHex());
+	INFO("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");	
+
+	// LXMF tests
+	RNS::Bytes destination = plaintext.left(16);
+	RNS::Bytes source = plaintext.mid(16,16);
+	RNS::Bytes ed25519Signature = plaintext.mid(32,64);
+	RNS::Bytes msgPack = plaintext.mid(96);
+
+	LXMFMsgPack message;
+    MsgPack::Unpacker unpacker;
+    unpacker.feed(msgPack.data(), msgPack.size());
+    unpacker.deserialize(message);
+	INFO("Destination: " + destination.toHex());
+	INFO("Source: " + source.toHex());
+	INFO("MsgPack: " + msgPack.toHex());
+
+	char buffer[80];
+	std::time_t temp = message.timestamp;
+	std::tm* t = std::gmtime(&temp);
+	strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",t);
+	INFO("Message sent: "+ to_str(buffer));
+	
+	RNS::Bytes content = RNS::Bytes(message.content.data(),message.content.size());
+	INFO("Content: " + content.toString());
+
 	INFO("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");	
 }
 
