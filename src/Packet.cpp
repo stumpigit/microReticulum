@@ -61,7 +61,11 @@ uint8_t Packet::get_packed_flags() {
 		if (!_object->_destination) {
 			throw std::logic_error("Packet destination is required");
 		}
-		packed_flags = (_object->_header_type << 6) | (_object->_transport_type << 4) | (_object->_destination.type() << 2) | _object->_packet_type;
+		if (link()!=NULL) {
+			_object->_destination_type = RNS::Type::Destination::LINK;
+			packed_flags = (_object->_header_type << 6) | (_object->_transport_type << 4) | (RNS::Type::Destination::LINK << 2) | _object->_packet_type;	
+		}
+		else packed_flags = (_object->_header_type << 6) | (_object->_transport_type << 4) | (_object->_destination.type() << 2) | _object->_packet_type;
 	}
 	return packed_flags;
 }
@@ -246,10 +250,16 @@ void Packet::pack() {
 	if (!_object->_destination) {
 		throw std::logic_error("Packet destination is required");
 	}
-	_object->_destination_hash = _object->_destination.hash();
+	if (link()!=NULL) {
+		_object->_destination_hash = _object->_link->hash();
+	}
+	else _object->_destination_hash = _object->_destination.hash();
 
 	_object->_raw.clear();
 	_object->_encrypted = false;
+
+	// CS: Recreate flags
+	_object->_flags = get_packed_flags();
 
 	_object->_raw << _object->_flags;
 	_object->_raw << _object->_hops;
@@ -262,9 +272,17 @@ void Packet::pack() {
 	}
 	else {
 		if (_object->_header_type == HEADER_1) {
-			TRACE("Packet::pack: destination hash: " + _object->_destination.hash().toHex() );
-			_object->_raw << _object->_destination.hash();
-			_object->_raw << (uint8_t)_object->_context;
+			if (link()!=NULL) {
+				TRACE("Packet::pack: link-destination hash: " + _object->_link->hash().toHex());
+				_object->_raw << _object->_link->hash();
+				_object->_raw << (uint8_t)_object->_context;
+			}
+			else {
+				TRACE("Packet::pack: destination hash: " + _object->_destination.hash().toHex() );
+				_object->_raw << _object->_destination.hash();
+				_object->_raw << (uint8_t)_object->_context;
+			}
+			
 
 			if (_object->_packet_type == ANNOUNCE) {
 				// Announce packets are not encrypted
@@ -278,7 +296,7 @@ void Packet::pack() {
 				// Resource proofs are not encrypted
 				_object->_raw << _object->_data;
 			}
-			else if (_object->_packet_type == PROOF && _object->_destination.type() == Type::Destination::LINK) {
+			else if (_object->_packet_type == PROOF && link()!=NULL) {
 				// Packet proofs over links are not encrypted
 				_object->_raw << _object->_data;
 			}
@@ -376,7 +394,7 @@ bool Packet::unpack() {
 		_object->_packed = false;
 		update_hash();
 	}
-	catch (std::exception& e) {
+	catch (std::exception& e) { 
 		ERROR(std::string("Received malformed packet, dropping it. The contained exception was: ") + e.what());
 		return false;
 	}
@@ -634,7 +652,7 @@ std::string Packet::dumpString() const {
 		if (_object->_context == RESOURCE_PRF) {
 			encrypted = false;
 		}
-		if (_object->_destination && _object->_destination.type() == Type::Destination::LINK) {
+		if (_object->_destination && link()!=NULL) {
 			encrypted = false;
 		}
 		break;

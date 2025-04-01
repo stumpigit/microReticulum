@@ -799,7 +799,7 @@ using namespace RNS::Utilities;
 
 				if (packet.destination().type() == Type::Destination::LINK) {
 					if (packet.destination().status() == Type::Link::CLOSED) {
-						TRACE("Transport::outbound: Pscket destination is link-closed, not transmitting");
+						TRACE("Transport::outbound: Packet destination is link-closed, not transmitting");
 						should_transmit = false;
 					}
 					// CBA Bug? Destination has no member attached_interface

@@ -118,7 +118,7 @@ namespace RNS {
 		inline const RNS::Cryptography::X25519PublicKey::Ptr peer_pub() const { assert(_object); return _object->_peer_pub; }
 		inline void peer_pub(RNS::Cryptography::X25519PublicKey::Ptr peer_pub) { assert(_object); _object->_peer_pub = peer_pub; }
 
-		inline std::string toString() const { if (!_object) return ""; return "{Link: unknown}"; }
+		inline std::string toString() const { if (!_object) return link_id().toString(); return "{Link: unknown}"; }
 
 		inline void set_link_packet_callback(RNS::Link::Callbacks::packet callback) {
 			assert(_object);

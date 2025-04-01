@@ -94,10 +94,7 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 /*static*/ RNS::Link* Link::validate_request(const Destination &owner, const Bytes& data, const Packet& packet) {
 	DEBUG("Validing");
 	if(data.size() == (size_t)ECPUBSIZE) {
-		DEBUG("CS1");
 		try {
-			
-		DEBUG("CS2");
 			const size_t half = ECPUBSIZE / 2;
             // CS TODO
 			//std::vector<uint8_t> peer_pub_bytes(data->begin(), data.begin() + half);
@@ -149,8 +146,8 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 			RNS::log("Incoming link request " + link->link_id().toHex() + " accepted on " + link->attached_interface().toString(), RNS::LOG_DEBUG);
 			return link;
 		} catch (const std::exception& e) {
-
-			RNS::log("Validating link request failed: "  + std::string(e.what()));
+			ERRORF("!!! Validating link request failed:  %s", e.what());
+			//RNS::log("Validating link request failed: "  + std::string(e.what()));
 			return nullptr;
 		}
 	} else {
@@ -173,8 +170,6 @@ void Link::receive(const Packet& packet) {
 		if (packet.receiving_interface() != _object->_attached_interface) {
 			RNS::log("Link-associated packet received on unexpected interface! Someone might be trying to manipulate your communication!", RNS::LOG_ERROR);
 		} else {
-			
-			RNS::log("R1", RNS::LOG_DEBUG);
 			_object->_last_inbound = RNS::Utilities::OS::ltime();
 			if (packet.context() != RNS::Type::Packet::KEEPALIVE) {
 				_object->_last_data = _object->_last_inbound;
@@ -186,11 +181,9 @@ void Link::receive(const Packet& packet) {
 			}
 
 			if (packet.packet_type() == RNS::Type::Packet::DATA) {
-				RNS::log("R2", RNS::LOG_DEBUG);
 				bool should_query = false;
 				if (packet.context() == RNS::Type::NONE) {
 					std::string plaintext = decrypt(packet.data()).toString();
-					RNS::log("R3: " + plaintext, RNS::LOG_DEBUG);
 					if (!plaintext.empty()) {
 						if (callbacks()._packet != nullptr) {
 							//thread thread_obj([=]() {
@@ -199,24 +192,26 @@ void Link::receive(const Packet& packet) {
 							//thread_obj.detach();
 						}
 						// CS TODO
-						/*
+						
 						if (destination().proof_strategy() == RNS::Type::Destination::PROVE_ALL) {
-							packet.prove(destination());
+							prove_packet(packet);
+							//packet.prove(destination());
 							should_query = true;
-						} else if (_object->_destination.proof_strategy == RNS::Type::Destination::PROVE_APP) {
-							if (_object->_destination.callbacks.proof_requested) {
+						} else if (destination().proof_strategy() == RNS::Type::Destination::PROVE_APP) {
+							if (destination().callbacks()._proof_requested) {
 								try {
-									if (_object->_destination.callbacks.proof_requested(packet)) {
+									if (destination().callbacks()._proof_requested(packet)) {
 										packet.prove();
 										should_query = true;
 									}
-								} catch (exception &e) {
-									RNS::log("Error while executing proof request callback from " + string(typeid(*this).name()) + ". The contained exception was: " + e.what(), RNS::LOG_ERROR);
+								} catch (const std::exception& e) {
+									ERRORF("Error while executing proof request callback from %s. The contained exception was: %s", packet.toString(), e.what());
 								}
 							}
 						}
-						_object->___update_phy_stats(packet, true);
-						*/
+						// CS TODO
+						//_object->___update_phy_stats(packet, true);
+						
 					} 
 				// CS TODO
 				/*
@@ -448,8 +443,7 @@ void Link::prove() {
 
 	RNS::Packet proof = RNS::Packet(this->destination(), proof_data, RNS::Type::Packet::PROOF, RNS::Type::Packet::LRPROOF);
 	proof.link(*this);
-	proof.destination(this->destination());
-	TRACE(proof.dumpString());
+	//proof.destination(this->destination());
 	proof.send();
 	_object->_establishment_cost += proof.raw().size();
 	had_outbound();
@@ -469,6 +463,21 @@ void Link::prove_packet(const Packet& packet) {
 	proof.send()
 	_object->_had_outbound()
 */
+	assert(_object);
+	DEBUG("----- CS: In Proove Packet ");
+	DEBUG(this->destination().toString());	
+	DEBUG(packet.link()->destination().toString());
+	DEBUG(packet.dumpString());
+	RNS::Bytes signature = _object->_sig_prv->sign(packet.get_hash());
+	RNS::Bytes proof_data = packet.get_hash() + signature;
+	RNS::Packet proof = RNS::Packet(this->destination(), proof_data, RNS::Type::Packet::PROOF);
+
+	proof.link(*this);
+	proof.destination_hash(this->hash());
+	//proof.update_hash();
+	proof.send();
+	_object->_establishment_cost += proof.raw().size();
+	had_outbound();
 }
 
 void Link::handshake() {
@@ -542,7 +551,6 @@ void Link::load_peer(const Bytes& peer_pub_bytes, const Bytes& peer_sig_pub_byte
 	assert(_object);
 	_object->_peer_pub_bytes = peer_pub_bytes;
 	
-	DEBUG("CS5");
 	RNS::Cryptography::X25519PublicKey::Ptr  x = Cryptography::X25519PublicKey::from_public_bytes(_object->_peer_pub_bytes);
 	peer_pub(x);
 

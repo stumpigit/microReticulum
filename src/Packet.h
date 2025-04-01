@@ -232,6 +232,7 @@ namespace RNS {
 		inline void cached(bool cached) { assert(_object); _object->_cached = cached; }
 		inline const Bytes& packet_hash() const { assert(_object); return _object->_packet_hash; }
 		inline const Bytes& destination_hash() const { assert(_object); return _object->_destination_hash; }
+		inline void destination_hash(const Bytes& destination_hash) const { assert(_object); _object->_destination_hash = destination_hash; }
 		inline const Bytes& transport_id() const { assert(_object); return _object->_transport_id; }
 		inline void transport_id(const Bytes& transport_id) { assert(_object); _object->_transport_id = transport_id; }
 		inline const Bytes& raw() const { assert(_object); return _object->_raw; }
