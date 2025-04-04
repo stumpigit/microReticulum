@@ -327,7 +327,7 @@ Packet Destination::announce(const Bytes& app_data, bool path_response, const In
 		//TRACE("Destination::announce: random hash:  " + random_hash.toHex());
 		//TRACE("Destination::announce: app data:     " + new_app_data.toHex());
 		//TRACE("Destination::announce: app data text:" + new_app_data.toString());
-		signed_data << _object->_hash << _object->_identity.get_public_key() << _object->_name_hash << random_hash;
+		signed_data << _object->_hash << _object->_identity.get_public_key() << _object->_name_hash << random_hash << ratchet;
 		if (new_app_data) {
 			signed_data << new_app_data;
 		}
@@ -336,7 +336,7 @@ Packet Destination::announce(const Bytes& app_data, bool path_response, const In
 		Bytes signature(_object->_identity.sign(signed_data));
 		//TRACE("Destination::announce: signature:    " + signature.toHex());
 
-		announce_data << _object->_identity.get_public_key() << _object->_name_hash << random_hash << signature;
+		announce_data << _object->_identity.get_public_key() << _object->_name_hash << random_hash << ratchet << signature;
 
 		if (new_app_data) {
 			announce_data << new_app_data;
@@ -353,8 +353,10 @@ Packet Destination::announce(const Bytes& app_data, bool path_response, const In
 	}
 
 	Type::Packet::context_flag context_flag = RNS::Type::Packet::FLAG_UNSET;
-	if (!ratchet.empty())
+	if (!ratchet.empty()) {
 		context_flag = RNS::Type::Packet::FLAG_SET;
+		TRACE("CS: Destination:Announce Context_Flag set");
+	}
 
 	//TRACE("Destination::announce: creating announce packet...");
     //p announce_packet = RNS.Packet(self, announce_data, RNS.Packet.ANNOUNCE, context = announce_context, attached_interface = attached_interface)
@@ -479,9 +481,11 @@ void Destination::_reload_ratchets(std::string ratchets_path) {
             RNS.log("No existing ratchet data found, initialising new ratchet file for "+str(self), RNS.LOG_DEBUG)
             self.ratchets = []
             self.ratchets_path = ratchets_path
-            self._persist_ratchets()
+            self._persist_ratchets()s
 	*/
 	_object->ratchets.clear();
+	_object->ratchets.push_back({Bytes::NONE});
+	_object->ratchets_path = ratchets_path;
 }
 /*
 Enables ratchets on the destination. When ratchets are enabled, Reticulum will automatically rotate
@@ -624,12 +628,15 @@ Decrypts information for ``RNS.Destination.SINGLE`` or ``RNS.Destination.GROUP``
 
 	if (_object->_type == SINGLE && _object->_identity) {
 		if (!_object->ratchets.empty()) {
+			TRACE("CS: Destination:decrypt: decrypt with Ratchet");
 			Bytes decrypted = {Bytes::NONE};
 			try {
 				decrypted = _object->_identity.decrypt(data, _object->ratchets, _object->__enforce_ratchets, this);
 			}
 			catch (std::exception& e) {
 				decrypted = {Bytes::NONE};
+				
+				TRACE("CS: Destination:decrypt: decrypt with Ratchet failed");
 			}
 			
 			if (decrypted.empty()) {

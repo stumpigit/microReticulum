@@ -448,6 +448,7 @@ Recall last heard app_data for a destination hash.
 	auto iter = _known_ratchets.find(destination_hash);
 	if (iter != _known_ratchets.end()) {
 		const RatchetEntry& ratchet_data = (*iter).second;
+		DEBUG("CS: Found ratchet for " + destination_hash.toHex());
 		return ratchet_data._ratchet_data;
 	}
 	else {
@@ -474,7 +475,7 @@ Recall last heard app_data for a destination hash.
 			//TRACE("Identity::validate_announce: random_hash:      " + random_hash.toHex());
 			Bytes signature = packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8, SIGLENGTH/8);
 			//TRACE("Identity::validate_announce: signature:        " + signature.toHex());
-			Bytes ratchet;
+			Bytes ratchet = {Bytes::NONE};
 			Bytes app_data;
 			if (packet.data().size() > (KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + SIGLENGTH/8)) {
 				app_data = packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + SIGLENGTH/8);
@@ -483,7 +484,7 @@ Recall last heard app_data for a destination hash.
 
 			// If the packet context flag is set,
 			// this announce contains a new ratchet
-			if (packet.context() == RNS::Type::Packet::FLAG_SET) {
+			if (packet.context_flag() == RNS::Type::Packet::FLAG_SET) {
 				TRACE("Identity::Announce has ratchet");
 				ratchet = packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8, RATCHETSIZE/8);
 				signature = packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + RATCHETSIZE/8, SIGLENGTH/8);
@@ -496,7 +497,7 @@ Recall last heard app_data for a destination hash.
 			//TRACE("Identity::validate_announce: app_data text:    " + app_data.toString());
 
 			Bytes signed_data;
-			signed_data << packet.destination_hash() << public_key << name_hash << random_hash+app_data;
+			signed_data << packet.destination_hash() << public_key << name_hash << random_hash << ratchet +app_data;
 			//TRACE("Identity::validate_announce: signed_data:      " + signed_data.toHex());
 
 			if (packet.data().size() <= KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + SIGLENGTH/8) {
@@ -554,6 +555,7 @@ Recall last heard app_data for a destination hash.
 					}
 
 					if (!ratchet.empty()) {
+						TRACE("Identity:validate_announce ratchet not empty, remember it");
 						Identity::_remember_ratchet(packet.destination_hash(), ratchet);
 					}
 
