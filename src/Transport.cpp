@@ -372,7 +372,8 @@ using namespace RNS::Utilities;
 								announce_context,
 								Type::Transport::TRANSPORT,
 								Type::Packet::HEADER_2,
-								Transport::_identity.hash()
+								Transport::_identity.hash(),
+								announce_entry._packet.context_flag()
 							);
 
 							new_packet.hops(announce_entry._hops);
@@ -1889,7 +1890,8 @@ using namespace RNS::Utilities;
 											announce_context,
 											Type::Transport::TRANSPORT,
 											Type::Packet::HEADER_2,
-											_identity.hash()
+											_identity.hash(),
+											packet.context_flag()
 										);
 
 										new_announce.hops(packet.hops());
@@ -1908,7 +1910,8 @@ using namespace RNS::Utilities;
 											announce_context,
 											Type::Transport::TRANSPORT,
 											Type::Packet::HEADER_2,
-											_identity.hash()
+											_identity.hash(),
+											packet.context_flag()
 										);
 
 										new_announce.hops(packet.hops());
@@ -1943,7 +1946,8 @@ using namespace RNS::Utilities;
 								Type::Packet::PATH_RESPONSE,
 								Type::Transport::TRANSPORT,
 								Type::Packet::HEADER_2,
-								_identity.hash()
+								_identity.hash(),
+								packet.context_flag()
 							);
 
 							new_announce.hops(packet.hops());

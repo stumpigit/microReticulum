@@ -150,7 +150,7 @@ namespace RNS {
 			Type::Transport::types transport_type = Type::Transport::BROADCAST,
 			Type::Packet::header_types header_type = Type::Packet::HEADER_1,
 			const Bytes& transport_id = {Bytes::NONE},
-			bool create_receipt = true
+			bool create_receipt = true, Type::Packet::context_flag context_flag = Type::Packet::FLAG_UNSET
 		);
 		Packet(
 			const Destination& destination,
@@ -160,8 +160,8 @@ namespace RNS {
 			Type::Transport::types transport_type = Type::Transport::BROADCAST,
 			Type::Packet::header_types header_type = Type::Packet::HEADER_1,
 			const Bytes& transport_id = {Bytes::NONE},
-			bool create_receipt = true
-		) : Packet(destination, {Type::NONE}, data, packet_type, context, transport_type, header_type, transport_id, create_receipt) {}
+			bool create_receipt = true, Type::Packet::context_flag context_flag = Type::Packet::FLAG_UNSET
+		) : Packet(destination, {Type::NONE}, data, packet_type, context, transport_type, header_type, transport_id, create_receipt, context_flag) {}
 		virtual ~Packet() {
 			MEM("Packet object destroyed, this: " + std::to_string((uintptr_t)this) + ", data: " + std::to_string((uintptr_t)_object.get()));
 		}			
@@ -218,6 +218,7 @@ namespace RNS {
 		inline Type::Destination::types destination_type() const { assert(_object); return _object->_destination_type; }
 		inline Type::Packet::types packet_type() const { assert(_object); return _object->_packet_type; }
 		inline Type::Packet::context_types context() const { assert(_object); return _object->_context; }
+		inline Type::Packet::context_flag context_flag() const { assert(_object); return _object->_context_flag; }
 		inline bool sent() const { assert(_object); return _object->_sent; }
 		inline void sent(bool sent) { assert(_object); _object->_sent = sent; }
 		inline double sent_at() const { assert(_object); return _object->_sent_at; }
@@ -237,6 +238,8 @@ namespace RNS {
 		inline void transport_id(const Bytes& transport_id) { assert(_object); _object->_transport_id = transport_id; }
 		inline const Bytes& raw() const { assert(_object); return _object->_raw; }
 		inline const Bytes& data() const { assert(_object); return _object->_data; }
+		inline const Bytes& ratched_id() const {assert(_object); return _object->ratchet_id;}
+		inline const void ratched_id(Bytes ratched_id) const {assert(_object); _object->ratchet_id = ratched_id;}
 
 		inline std::string toString() const { if (!_object) return ""; return "{Packet:" + _object->_packet_hash.toHex() + "}"; }
 
@@ -262,6 +265,7 @@ namespace RNS {
 			Type::Destination::types _destination_type = Type::Destination::SINGLE;
 			Type::Packet::types _packet_type = Type::Packet::DATA;
 			Type::Packet::context_types _context = Type::Packet::CONTEXT_NONE;
+			Type::Packet::context_flag _context_flag = Type::Packet::FLAG_UNSET;
 
 			uint8_t _flags = 0;
 			uint8_t _hops = 0;
@@ -284,6 +288,8 @@ namespace RNS {
 			Bytes _packet_hash;
 			Bytes _destination_hash;
 			Bytes _transport_id;
+
+			Bytes ratchet_id;
 
 			Bytes _raw;		// header + ( plaintext | ciphertext-token )
 			Bytes _data;	// plaintext | ciphertext
