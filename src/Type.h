@@ -111,6 +111,16 @@ namespace RNS { namespace Type {
 		static const uint16_t KEYSIZE     = 256*2;
 		// X25519 key size in bits. A complete key is the concatenation of a 256 bit encryption key, and a 256 bit signing key.
 
+		
+		static const uint16_t RATCHETSIZE = 256;
+		// X.25519 ratchet key size in bits.
+
+		static const uint16_t RATCHET_EXPIRY = 60*60*24*30;
+    	// The expiry time for received ratchets in seconds, defaults to 30 days. Reticulum will always use the most recently
+    	// announced ratchet, and remember it for up to ``RATCHET_EXPIRY`` since receiving it, after which it will be discarded.
+    	// If a newer ratchet is announced in the meantime, it will be replace the already known ratchet.
+    
+
 		// Non-configurable constants
 		static const uint8_t FERNET_OVERHEAD           = Cryptography::Fernet::FERNET_OVERHEAD;
 		static const uint8_t AES128_BLOCKSIZE           = 16;          // In bytes
@@ -153,6 +163,12 @@ namespace RNS { namespace Type {
 
 		const uint8_t PR_TAG_WINDOW = 30;
 
+		//The default number of generated ratchet keys a destination will retain, if it has ratchets enabled.
+		const uint8_t RATCHET_COUNT = 512;
+
+ 		// The minimum interval between rotating ratchet keys, in seconds.
+    	const uint8_t RATCHET_INTERVAL = 30*60;
+ 
 	}
 
 	namespace Link {
@@ -267,6 +283,12 @@ namespace RNS { namespace Type {
 			LINKPROOF      = 0xFD,   // Packet is a link packet proof
 			LRRTT          = 0xFE,   // Packet is a link request round-trip time measurement
 			LRPROOF        = 0xFF,    // Packet is a link request proof
+		};
+
+		// Context flag values
+		enum context_flag {
+			FLAG_SET       = 0x01,
+			FLAG_UNSET     = 0x00
 		};
 
 		// This is used to calculate allowable

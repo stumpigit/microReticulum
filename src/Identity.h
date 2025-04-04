@@ -37,11 +37,22 @@ namespace RNS {
 			Bytes _app_data;
 		};
 
+		class RatchetEntry {
+			public:
+				RatchetEntry(const Bytes& ratchet_data) :  _ratchet_data(ratchet_data)
+				{
+				}
+			public:
+			Bytes _ratchet_data;
+		};
+
 	public:
 		static std::map<Bytes, IdentityEntry> _known_destinations;
 		static bool _saving_known_destinations;
 		// CBA
 		static uint16_t _known_destinations_maxsize;
+
+		static std::map<Bytes, RatchetEntry> _known_ratchets;
 
 	public:
 		Identity(Type::NoneConstructor none) {
@@ -98,8 +109,8 @@ namespace RNS {
 		inline const Bytes get_salt() const { assert(_object); return _object->_hash; }
 		inline const Bytes get_context() const { return {Bytes::NONE}; }
 
-		const Bytes encrypt(const Bytes& plaintext) const;
-		const Bytes decrypt(const Bytes& ciphertext_token) const;
+		const Bytes encrypt(const Bytes& plaintext, const Bytes& ratchet = {Bytes::NONE}) const;
+		const Bytes decrypt(const Bytes& ciphertext_token, const std::vector<Bytes> ratchets, bool enforce_ratchets = false, const Destination* ratchet_id_receiver = NULL) const;
 		const Bytes sign(const Bytes& message) const;
 		bool validate(const Bytes& signature, const Bytes& message) const;
 		// CBA following default for reference value requires inclusiion of header
@@ -150,6 +161,22 @@ namespace RNS {
 		static bool validate_announce(const Packet& packet);
 		static void persist_data();
 		static void exit_handler();
+
+		// Ratchets
+		static const Bytes current_ratchet_id(const Bytes& destination_hash);
+		static inline const Bytes _get_ratchet_id(const Bytes& ratchet_pub_bytes) {
+			return Identity::full_hash(ratchet_pub_bytes).left(RNS::Type::Identity::NAME_HASH_LENGTH/8);
+		}
+		static inline const Bytes _ratchet_public_bytes(const Bytes& ratchet) {
+			return RNS::Cryptography::X25519PrivateKey::from_private_bytes(ratchet)->public_key()->public_bytes();
+		}
+		static inline const Bytes _generate_ratchet() {
+			return RNS::Cryptography::X25519PrivateKey::generate()->private_bytes();
+		}
+		static const void _remember_ratchet(const Bytes& destination_hash, Bytes& ratchet);
+		static const void _clean_ratchets();
+		static const Bytes& get_ratchet(const Bytes& destination_hash);
+
 
 		// getters/setters
 		inline const Bytes& encryptionPrivateKey() const { assert(_object); return _object->_prv_bytes; }

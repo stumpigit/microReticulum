@@ -25,6 +25,7 @@ using namespace RNS::Utilities;
 // CBA ACCUMULATES
 /*static*/ //uint16_t Identity::_known_destinations_maxsize = 100;
 /*static*/ uint16_t Identity::_known_destinations_maxsize = 100;
+/*static*/ std::map<Bytes, Identity::RatchetEntry> Identity::_known_ratchets;
 
 Identity::Identity(bool create_keys /*= true*/) : _object(new Object()) {
 	if (create_keys) {
@@ -381,6 +382,86 @@ Recall last heard app_data for a destination hash.
 	}
 }
 
+// Ratchet
+
+/*static*/ const Bytes Identity::current_ratchet_id(const Bytes& destination_hash) {
+	//Get the ID of the currently used ratchet key for a given destination hash
+	//
+	//:param destination_hash: A destination hash as *bytes*.
+	//:returns: A ratchet ID as *bytes* or *None*.
+
+	Bytes ratchet = Identity::get_ratchet(destination_hash);
+	if (ratchet.empty()) {
+		return Bytes();
+	}
+	else {
+		return Identity::_get_ratchet_id(ratchet);
+	}
+}
+
+/*static*/ const void Identity::_remember_ratchet(const Bytes& destination_hash, Bytes& ratchet) {
+	bool ratchet_exists = false;
+	auto iter = _known_ratchets.find(destination_hash);
+	if (iter != _known_ratchets.end()) {
+		const RatchetEntry& ratchet_data = (*iter).second;
+		if (ratchet_data._ratchet_data == ratchet) ratchet_exists = true;
+	}
+	if (!ratchet_exists) {
+		RatchetEntry r = RatchetEntry(ratchet);
+		_known_ratchets.insert({destination_hash, r});
+
+	}
+
+	// CS TODO -> Persist ratchets
+}
+
+/*static*/ const void Identity::_clean_ratchets() {
+	// CS TODO
+}
+
+/*static*/ const Bytes& Identity::get_ratchet(const Bytes& destination_hash) {
+	/*
+	if not destination_hash in Identity.known_ratchets:
+            ratchetdir = RNS.Reticulum.storagepath+"/ratchets"
+            hexhash = RNS.hexrep(destination_hash, delimit=False)
+            ratchet_path = f"{ratchetdir}/{hexhash}"
+            if os.path.isfile(ratchet_path):
+                try:
+                    with open(ratchet_path, "rb") as ratchet_file:
+                        ratchet_data = umsgpack.unpackb(ratchet_file.read())
+                        if time.time() < ratchet_data["received"]+Identity.RATCHET_EXPIRY and len(ratchet_data["ratchet"]) == Identity.RATCHETSIZE//8:
+                            Identity.known_ratchets[destination_hash] = ratchet_data["ratchet"]
+                        else:
+                            return None
+                
+                except Exception as e:
+                    RNS.log(f"An error occurred while loading ratchet data for {RNS.prettyhexrep(destination_hash)} from storage.", RNS.LOG_ERROR)
+                    RNS.log(f"The contained exception was: {e}", RNS.LOG_ERROR)
+                    return None
+
+        if destination_hash in Identity.known_ratchets:
+            return Identity.known_ratchets[destination_hash]
+        else:
+            RNS.log(f"Could not load ratchet for {RNS.prettyhexrep(destination_hash)}", RNS.LOG_DEBUG)
+            return None
+	*/
+	auto iter = _known_ratchets.find(destination_hash);
+	if (iter != _known_ratchets.end()) {
+		const RatchetEntry& ratchet_data = (*iter).second;
+		DEBUG("CS: Found ratchet for " + destination_hash.toHex());
+		return ratchet_data._ratchet_data;
+	}
+	else {
+		DEBUG("Could not load ratchet for " + destination_hash.toHex() + " from storage");
+	}
+	return {Bytes::NONE};
+
+}
+
+
+
+
+
 /*static*/ bool Identity::validate_announce(const Packet& packet) {
 	try {
 		if (packet.packet_type() == Type::Packet::ANNOUNCE) {
@@ -394,15 +475,29 @@ Recall last heard app_data for a destination hash.
 			//TRACE("Identity::validate_announce: random_hash:      " + random_hash.toHex());
 			Bytes signature = packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8, SIGLENGTH/8);
 			//TRACE("Identity::validate_announce: signature:        " + signature.toHex());
+			Bytes ratchet = {Bytes::NONE};
 			Bytes app_data;
 			if (packet.data().size() > (KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + SIGLENGTH/8)) {
 				app_data = packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + SIGLENGTH/8);
 			}
+
+
+			// If the packet context flag is set,
+			// this announce contains a new ratchet
+			if (packet.context_flag() == RNS::Type::Packet::FLAG_SET) {
+				TRACE("Identity::Announce has ratchet");
+				ratchet = packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8, RATCHETSIZE/8);
+				signature = packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + RATCHETSIZE/8, SIGLENGTH/8);
+				if (packet.data().size() > (KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + RATCHETSIZE/8 + SIGLENGTH/8)) {
+					app_data = packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + RATCHETSIZE/8 + SIGLENGTH/8);
+				}
+			}
+
 			//TRACE("Identity::validate_announce: app_data:         " + app_data.toHex());
 			//TRACE("Identity::validate_announce: app_data text:    " + app_data.toString());
 
 			Bytes signed_data;
-			signed_data << packet.destination_hash() << public_key << name_hash << random_hash+app_data;
+			signed_data << packet.destination_hash() << public_key << name_hash << random_hash << ratchet +app_data;
 			//TRACE("Identity::validate_announce: signed_data:      " + signed_data.toHex());
 
 			if (packet.data().size() <= KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + SIGLENGTH/8) {
@@ -459,6 +554,11 @@ Recall last heard app_data for a destination hash.
 						TRACE("Valid announce for " + packet.destination_hash().toHex() + " " + std::to_string(packet.hops()) + " hops away, received on " + packet.receiving_interface().toString() + signal_str);
 					}
 
+					if (!ratchet.empty()) {
+						TRACE("Identity:validate_announce ratchet not empty, remember it");
+						Identity::_remember_ratchet(packet.destination_hash(), ratchet);
+					}
+
 					return true;
 				}
 				else {
@@ -497,7 +597,7 @@ Encrypts information for the identity.
 :returns: Ciphertext token as *bytes*.
 :raises: *KeyError* if the instance does not hold a public key.
 */
-const Bytes Identity::encrypt(const Bytes& plaintext) const {
+const Bytes Identity::encrypt(const Bytes& plaintext, const Bytes& ratchet /*= {Bytes::NONE}*/) const {
 	assert(_object);
 	TRACE("Identity::encrypt: encrypting data...");
 	if (!_object->_pub) {
@@ -509,7 +609,13 @@ const Bytes Identity::encrypt(const Bytes& plaintext) const {
 
 	// CRYPTO: create shared key for key exchange using own public key
 	//shared_key = ephemeral_key.exchange(self.pub)
-	Bytes shared_key = ephemeral_key->exchange(_object->_pub_bytes);
+	Bytes shared_key;
+	if (!ratchet.empty()) {
+		shared_key = ephemeral_key->exchange(Cryptography::X25519PublicKey::from_public_bytes(ratchet)->public_bytes());
+	}
+	else {
+		shared_key = ephemeral_key->exchange(_object->_pub_bytes);
+	}
 	TRACE("Identity::encrypt: shared key:           " + shared_key.toHex());
 
 	Bytes derived_key = Cryptography::hkdf(
@@ -537,7 +643,7 @@ Decrypts information for the identity.
 :returns: Plaintext as *bytes*, or *None* if decryption fails.
 :raises: *KeyError* if the instance does not hold a private key.
 */
-const Bytes Identity::decrypt(const Bytes& ciphertext_token) const {
+const Bytes Identity::decrypt(const Bytes& ciphertext_token, const std::vector<Bytes> ratchets /*= nullptr*/, bool enforce_ratchets /*= false*/, const Destination* ratchet_id_receiver /*= NULL*/) const {
 	assert(_object);
 	TRACE("Identity::decrypt: decrypting data...");
 	if (!_object->_prv) {
@@ -557,28 +663,78 @@ const Bytes Identity::decrypt(const Bytes& ciphertext_token) const {
 
 		// CRYPTO: create shared key for key exchange using peer public key
 		//shared_key = _object->_prv->exchange(peer_pub);
-		Bytes shared_key = _object->_prv->exchange(peer_pub_bytes);
-		TRACE("Identity::decrypt: shared key:           " + shared_key.toHex());
-
-		Bytes derived_key = Cryptography::hkdf(
-			32,
-			shared_key,
-			get_salt(),
-			get_context()
-		);
-		TRACE("Identity::decrypt: derived key:          " + derived_key.toHex());
-
-		Cryptography::Fernet fernet(derived_key);
+		Bytes shared_key;
 		//ciphertext = ciphertext_token[Identity.KEYSIZE//8//2:]
 		Bytes ciphertext(ciphertext_token.mid(Type::Identity::KEYSIZE/8/2));
 		TRACE("Identity::decrypt: Fernet decrypting data of length " + std::to_string(ciphertext.size()));
 		TRACE("Identity::decrypt: ciphertext: " + ciphertext.toHex());
-		plaintext = fernet.decrypt(ciphertext);
+
+		if (!ratchets.empty()) {
+			for (Bytes ratchet : ratchets) {
+				try {
+					X25519PrivateKey::Ptr ratchet_prv = X25519PrivateKey::from_private_bytes(ratchet);
+					Bytes ratchet_id = Identity::_get_ratchet_id(ratchet_prv->public_key()->public_bytes());
+					shared_key = ratchet_prv->exchange(peer_pub_bytes);
+					TRACE("Identity::decrypt:ratchet: shared key:           " + shared_key.toHex());
+					Bytes derived_key = Cryptography::hkdf(
+						32,
+						shared_key,
+						get_salt(),
+						get_context()
+					);
+					TRACE("Identity::decrypt:ratched: derived key:          " + derived_key.toHex());
+			
+					Cryptography::Fernet fernet(derived_key);
+					
+					plaintext = fernet.decrypt(ciphertext);
+
+					// CS TODO
+					if (ratchet_id_receiver) {
+						ratchet_id_receiver->latest_ratched_id(ratchet_id);
+					}
+
+					break;
+				}
+				catch (std::exception& e) {
+					// pass
+				}
+			}
+		}
+
+		if (enforce_ratchets && plaintext.empty()) {
+			RNS::log("Decryption with ratchet enforcement by "+ hash().toHex() +" failed. Dropping packet.", RNS::LOG_DEBUG);
+			// CS TODO
+			/*if (ratchet_id_receiver) {
+				ratchet_id_receiver.latest_ratchet_id = NULL;
+			}*/
+			return {Bytes::NONE};
+		}
+
+		if (plaintext.empty()) {
+			shared_key = _object->_prv->exchange(peer_pub_bytes);
+			TRACE("Identity::decrypt: shared key:           " + shared_key.toHex());
+	
+			Bytes derived_key = Cryptography::hkdf(
+				32,
+				shared_key,
+				get_salt(),
+				get_context()
+			);
+			TRACE("Identity::decrypt: derived key:          " + derived_key.toHex());
+	
+			Cryptography::Fernet fernet(derived_key);
+			
+			plaintext = fernet.decrypt(ciphertext);
+		}
 		TRACE("Identity::decrypt: plaintext:  " + plaintext.toHex());
 		//TRACE("Identity::decrypt: Fernet decrypted data of length " + std::to_string(plaintext.size()));
 	}
 	catch (std::exception& e) {
 		DEBUG("Decryption by " + toString() + " failed: " + e.what());
+		// CS TODO
+		/*if (ratchet_id_receiver) {
+			ratchet_id_receiver.latest_ratchet_id = NULL;
+		}*/
 	}
 		
 	return plaintext;

@@ -95,6 +95,10 @@ namespace RNS {
 		static Bytes hash_from_name_and_identity(const char* full_name, const Identity& identity);
 
 	public:
+		const void _clean_ratchets();
+		const void _persist_ratchets();
+		const bool rotate_ratchets();
+	
 		//Packet announce(const Bytes& app_data = {}, bool path_response = false, const Interface& attached_interface = {Type::NONE}, const Bytes& tag = {}, bool send = true);
 		Packet announce(const Bytes& app_data, bool path_response, const Interface& attached_interface, const Bytes& tag = {}, bool send = true);
 		Packet announce(const Bytes& app_data = {}, bool path_response = false);
@@ -156,6 +160,12 @@ namespace RNS {
 		void receive(const Packet& packet);
 		void incoming_link_request(const Bytes& data, const Packet& packet);
 
+		void _reload_ratchets(std::string ratchets_path);
+		bool enable_ratchets(std::string ratchets_path);
+		bool enforce_ratchets();
+		bool set_retained_ratchets(uint8_t retained_ratchets);
+		bool set_ratchet_interval(uint8_t interval);
+
 		virtual const Bytes encrypt(const Bytes& data);
 		virtual const Bytes decrypt(const Bytes& data);
 		virtual const Bytes sign(const Bytes& message);
@@ -175,6 +185,8 @@ namespace RNS {
 		inline const Callbacks& callbacks() const { assert(_object); return _object->_callbacks; }
 		inline const Identity& identity() const { assert(_object); return _object->_identity; }
 		inline const std::map<Bytes, PathResponse>& path_responses() { assert(_object); return _object->_path_responses; }
+		inline const Bytes& latest_ratched_id() const { assert(_object); return _object->latest_ratched_id;}
+		inline const void latest_ratched_id(Bytes latest_ratched_id) const { assert(_object); _object->latest_ratched_id=latest_ratched_id;}
 
 		inline std::string toString() const { if (!_object) return ""; return "{Destination:" + _object->_hash.toHex() + "}"; }
 
@@ -191,6 +203,15 @@ namespace RNS {
 			Type::Destination::directions _direction;
 			Type::Destination::proof_strategies _proof_strategy = Type::Destination::PROVE_NONE;
 			uint16_t _mtu = 0;
+			
+			std::vector<Bytes> ratchets;
+			std::string ratchets_path;
+			uint64_t latest_ratchet_time;
+			Bytes latest_ratched_id = {Bytes::NONE};
+			bool __enforce_ratchets = false;
+			uint8_t retained_ratchets = RNS::Type::Destination::RATCHET_COUNT;
+			uint8_t ratchet_interval = RNS::Type::Destination::RATCHET_INTERVAL;
+
 
 			std::map<Bytes, PathResponse> _path_responses;
 			//z _links = []

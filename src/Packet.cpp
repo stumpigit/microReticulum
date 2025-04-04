@@ -17,7 +17,7 @@ ProofDestination::ProofDestination(const Packet& packet) : Destination({Type::NO
 {
 }
 
-Packet::Packet(const Destination& destination, const Interface& attached_interface, const Bytes& data, types packet_type /*= DATA*/, context_types context /*= CONTEXT_NONE*/, Type::Transport::types transport_type /*= Type::Transport::BROADCAST*/, header_types header_type /*= HEADER_1*/, const Bytes& transport_id /*= {Bytes::NONE}*/, bool create_receipt /*= true*/) : _object(new Object(destination, attached_interface)) {
+Packet::Packet(const Destination& destination, const Interface& attached_interface, const Bytes& data, types packet_type /*= DATA*/, context_types context /*= CONTEXT_NONE*/, Type::Transport::types transport_type /*= Type::Transport::BROADCAST*/, header_types header_type /*= HEADER_1*/, const Bytes& transport_id /*= {Bytes::NONE}*/, bool create_receipt /*= true*/, Type::Packet::context_flag context_flag /*= Type::Packet::FLAG_UNSET*/) : _object(new Object(destination, attached_interface)) {
 
 	if (_object->_destination) {
 		TRACE("Creating packet with destination...");
@@ -39,6 +39,7 @@ Packet::Packet(const Destination& destination, const Interface& attached_interfa
 		}
 		_object->_flags = get_packed_flags();
 		_object->_create_receipt = create_receipt;
+		_object->_context_flag = context_flag;
 	}
 	else {
 		TRACE("Creating packet without destination...");
@@ -55,7 +56,7 @@ uint8_t Packet::get_packed_flags() {
 	assert(_object);
 	uint8_t packed_flags = 0;
 	if (_object->_context == LRPROOF) {
-		packed_flags = (_object->_header_type << 6) | (_object->_transport_type << 4) | (Type::Destination::LINK << 2) | _object->_packet_type;
+		packed_flags = (_object->_header_type << 6) | (_object->_context_flag << 5) | (_object->_transport_type << 4) | (Type::Destination::LINK << 2) | _object->_packet_type;
 	}
 	else {
 		if (!_object->_destination) {
@@ -63,9 +64,9 @@ uint8_t Packet::get_packed_flags() {
 		}
 		if (link()!=NULL) {
 			_object->_destination_type = RNS::Type::Destination::LINK;
-			packed_flags = (_object->_header_type << 6) | (_object->_transport_type << 4) | (RNS::Type::Destination::LINK << 2) | _object->_packet_type;	
+			packed_flags = (_object->_header_type << 6) | (_object->_context_flag << 5) | (_object->_transport_type << 4) | (RNS::Type::Destination::LINK << 2) | _object->_packet_type;	
 		}
-		else packed_flags = (_object->_header_type << 6) | (_object->_transport_type << 4) | (_object->_destination.type() << 2) | _object->_packet_type;
+		else packed_flags = (_object->_header_type << 6) | (_object->_context_flag << 5) | (_object->_transport_type << 4) | (_object->_destination.type() << 2) | _object->_packet_type;
 	}
 	return packed_flags;
 }
@@ -73,7 +74,8 @@ uint8_t Packet::get_packed_flags() {
 void Packet::unpack_flags(uint8_t flags) {
 	assert(_object);
 	_object->_header_type      = static_cast<header_types>((flags & 0b01000000) >> 6);
-	_object->_transport_type   = static_cast<Type::Transport::types>((flags & 0b00110000) >> 4);
+	_object->_context_flag     = static_cast<Type::Packet::context_flag>((flags & 0b00100000) >> 5);
+	_object->_transport_type   = static_cast<Type::Transport::types>((flags & 0b00010000) >> 4);
 	_object->_destination_type = static_cast<Type::Destination::types>((flags & 0b00001100) >> 2);
 	_object->_packet_type      = static_cast<types>(flags & 0b00000011);
 }
@@ -318,6 +320,9 @@ void Packet::pack() {
 				// In all other cases, we encrypt the packet
 				// with the destination's encryption method
 				_object->_raw << _object->_destination.encrypt(_object->_data);
+				if (!_object->_destination.latest_ratched_id().empty()) {
+					_object->ratchet_id = _object->_destination.latest_ratched_id();
+				}
 				_object->_encrypted = true;
 			}
 		}
