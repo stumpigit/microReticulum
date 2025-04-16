@@ -36,7 +36,7 @@ namespace RNS { namespace Type {
 		Future minimum will probably be locked in at 251 bytes to support
 		networks with segments of different MTUs. Absolute minimum is 219.
 		*/
-		static const uint16_t MTU = 500;
+		static const uint16_t R_MTU = 500;
 
 		static const uint16_t MAX_QUEUED_ANNOUNCES = 16384;
 		static const uint32_t QUEUED_ANNOUNCE_LIFE = 60*60*24;
@@ -78,7 +78,7 @@ namespace RNS { namespace Type {
 		static const uint16_t IFAC_MIN_SIZE    = 1;
 		//z IFAC_SALT        = bytes.fromhex("adf54d882c9a9b80771eb4995d702d4a3e733391b2a0f53f416d9f907e55cff8")
 
-		static const uint16_t MDU              = MTU - HEADER_MAXSIZE - IFAC_MIN_SIZE;
+		static const uint16_t MDU              = R_MTU - HEADER_MAXSIZE - IFAC_MIN_SIZE;
 
 		static const uint32_t RESOURCE_CACHE   = 60*60*24;
 		// CBA TEST
@@ -180,7 +180,7 @@ namespace RNS { namespace Type {
 		static const uint8_t KEYSIZE           = 32;
 
 		//static const uint16_t MDU = floor((Reticulum::MTU-Reticulum::IFAC_MIN_SIZE-Reticulum::HEADER_MINSIZE-Identity::FERNET_OVERHEAD)/Identity::AES128_BLOCKSIZE)*Identity::AES128_BLOCKSIZE - 1;
-		static const uint16_t MDU = ((Reticulum::MTU-Reticulum::IFAC_MIN_SIZE-Reticulum::HEADER_MINSIZE-Identity::FERNET_OVERHEAD)/Identity::AES128_BLOCKSIZE)*Identity::AES128_BLOCKSIZE - 1;
+		static const uint16_t MDU = ((Reticulum::R_MTU-Reticulum::IFAC_MIN_SIZE-Reticulum::HEADER_MINSIZE-Identity::FERNET_OVERHEAD)/Identity::AES128_BLOCKSIZE)*Identity::AES128_BLOCKSIZE - 1;
 
 		// Timeout for link establishment in seconds per hop to destination.
 		static const uint8_t ESTABLISHMENT_TIMEOUT_PER_HOP = Reticulum::DEFAULT_PER_HOP_TIMEOUT;

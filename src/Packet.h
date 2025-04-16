@@ -279,7 +279,7 @@ namespace RNS {
 			bool _cached = false;		// whether packet has been cached
 			PacketReceipt _receipt = {Type::NONE};
 
-			uint16_t _mtu = Type::Reticulum::MTU;
+			uint16_t _mtu = Type::Reticulum::R_MTU;
 			double _sent_at = 0;
 
 			float _rssi = 0.0;

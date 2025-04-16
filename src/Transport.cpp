@@ -2439,7 +2439,7 @@ TRACE("CS1_3");
 /*static*/ void Transport::register_destination(Destination& destination) {
 	//TRACE("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	TRACE("Transport: Registering destination " + destination.toString());
-	destination.mtu(Type::Reticulum::MTU);
+	destination.mtu(Type::Reticulum::R_MTU);
 	if (destination.direction() == Type::Destination::IN) {
 #if defined(DESTINATIONS_SET)
 		for (auto& registered_destination : _destinations) {
@@ -2812,7 +2812,7 @@ Deregisters an announce handler.
 /*static*/ double Transport::first_hop_timeout(const Bytes& destination_hash) {
 	double latency = next_hop_per_byte_latency(destination_hash);
 	if (latency > 0.0) {
-		return RNS::Type::Reticulum::MTU * latency + RNS::Type::Reticulum::DEFAULT_PER_HOP_TIMEOUT;
+		return RNS::Type::Reticulum::R_MTU * latency + RNS::Type::Reticulum::DEFAULT_PER_HOP_TIMEOUT;
 	}
 	else {
 		return RNS::Type::Reticulum::DEFAULT_PER_HOP_TIMEOUT;
@@ -2821,7 +2821,7 @@ Deregisters an announce handler.
 
 /*static*/ double Transport::extra_link_proof_timeout(const Interface& interface) {
 	if (interface) {
-		return ((1.0/(double)interface.bitrate())*8.0)*RNS::Type::Reticulum::MTU;
+		return ((1.0/(double)interface.bitrate())*8.0)*RNS::Type::Reticulum::R_MTU;
 	}
 	else {
 		return 0.0;
