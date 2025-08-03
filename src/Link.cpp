@@ -185,6 +185,14 @@ void Link::receive(const Packet& packet) {
 				if (packet.context() == RNS::Type::NONE) {
 					std::string plaintext = decrypt(packet.data()).toString();
 					if (!plaintext.empty()) {
+						if(!_established_callbacks_called) {
+							if (owner().callbacks()._link_established != nullptr) {
+								owner().callbacks()._link_established(*this);
+							} else {
+								TRACE("No link established callbacks");
+							}
+							_established_callbacks_called = true;
+						}
 						if (callbacks()._packet != nullptr) {
 							//thread thread_obj([=]() {
 								callbacks()._packet(plaintext, packet);
@@ -489,7 +497,7 @@ void Link::handshake() {
 		_object->_shared_key = _object->_prv->exchange(public_bytes.public_bytes());
 
 		_object->_derived_key = RNS::Cryptography::hkdf(
-			32,
+			64,
 			_object->_shared_key,
 			get_salt()
 		);
@@ -753,6 +761,7 @@ void Link::rtt_packet(Packet packet) {
 	//		try:
 				if (owner().callbacks()._link_established != nullptr) {
 					owner().callbacks()._link_established(*this);
+					_established_callbacks_called = true;
 				}
 				//		_object->_owner.callbacks.link_established(self)
 	//		except Exception as e:

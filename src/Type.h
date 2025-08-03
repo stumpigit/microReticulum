@@ -123,7 +123,7 @@ namespace RNS { namespace Type {
 
 		// Non-configurable constants
 		static const uint8_t FERNET_OVERHEAD           = Cryptography::Fernet::FERNET_OVERHEAD;
-		static const uint8_t AES128_BLOCKSIZE           = 16;          // In bytes
+		static const uint8_t AES_BLOCKSIZE           = 16;          // In bytes
 		static const uint16_t HASHLENGTH                = Reticulum::HASHLENGTH;	// In bits
 		static const uint16_t SIGLENGTH                 = KEYSIZE;     // In bits
 
@@ -180,7 +180,7 @@ namespace RNS { namespace Type {
 		static const uint8_t KEYSIZE           = 32;
 
 		//static const uint16_t MDU = floor((Reticulum::MTU-Reticulum::IFAC_MIN_SIZE-Reticulum::HEADER_MINSIZE-Identity::FERNET_OVERHEAD)/Identity::AES128_BLOCKSIZE)*Identity::AES128_BLOCKSIZE - 1;
-		static const uint16_t MDU = ((Reticulum::R_MTU-Reticulum::IFAC_MIN_SIZE-Reticulum::HEADER_MINSIZE-Identity::FERNET_OVERHEAD)/Identity::AES128_BLOCKSIZE)*Identity::AES128_BLOCKSIZE - 1;
+		static const uint16_t MDU = ((Reticulum::R_MTU-Reticulum::IFAC_MIN_SIZE-Reticulum::HEADER_MINSIZE-Identity::FERNET_OVERHEAD)/Identity::AES_BLOCKSIZE)*Identity::AES_BLOCKSIZE - 1;
 
 		// Timeout for link establishment in seconds per hop to destination.
 		static const uint8_t ESTABLISHMENT_TIMEOUT_PER_HOP = Reticulum::DEFAULT_PER_HOP_TIMEOUT;
@@ -301,7 +301,7 @@ namespace RNS { namespace Type {
 		// the below calculation; 383 bytes.
 		//static const uint16_t ENCRYPTED_MDU  = floor((Reticulum::MDU-Identity::FERNET_OVERHEAD-Identity::KEYSIZE/16)/Identity::AES128_BLOCKSIZE)*Identity::AES128_BLOCKSIZE - 1;
 		//static const uint16_t ENCRYPTED_MDU;
-		static const uint16_t ENCRYPTED_MDU  = ((Reticulum::MDU-Identity::FERNET_OVERHEAD-Identity::KEYSIZE/16)/Identity::AES128_BLOCKSIZE)*Identity::AES128_BLOCKSIZE - 1;
+		static const uint16_t ENCRYPTED_MDU  = ((Reticulum::MDU-Identity::FERNET_OVERHEAD-Identity::KEYSIZE/16)/Identity::AES_BLOCKSIZE)*Identity::AES_BLOCKSIZE - 1;
 		// The maximum size of the payload data in a single encrypted packet 
 		static const uint16_t PLAIN_MDU      = MDU;
 		// The maximum size of the payload data in a single unencrypted packet

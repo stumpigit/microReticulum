@@ -619,7 +619,7 @@ const Bytes Identity::encrypt(const Bytes& plaintext, const Bytes& ratchet /*= {
 	TRACE("Identity::encrypt: shared key:           " + shared_key.toHex());
 
 	Bytes derived_key = Cryptography::hkdf(
-		32,
+		64,
 		shared_key,
 		get_salt(),
 		get_context()
@@ -677,7 +677,7 @@ const Bytes Identity::decrypt(const Bytes& ciphertext_token, const std::vector<B
 					shared_key = ratchet_prv->exchange(peer_pub_bytes);
 					TRACE("Identity::decrypt:ratchet: shared key:           " + shared_key.toHex());
 					Bytes derived_key = Cryptography::hkdf(
-						32,
+						64,
 						shared_key,
 						get_salt(),
 						get_context()
@@ -715,7 +715,7 @@ const Bytes Identity::decrypt(const Bytes& ciphertext_token, const std::vector<B
 			TRACE("Identity::decrypt: shared key:           " + shared_key.toHex());
 	
 			Bytes derived_key = Cryptography::hkdf(
-				32,
+				64,
 				shared_key,
 				get_salt(),
 				get_context()

@@ -17,14 +17,15 @@ Fernet::Fernet(const Bytes& key) {
 		throw std::invalid_argument("Fernet key cannot be None");
 	}
 
-	if (key.size() != 32) {
-		throw std::invalid_argument("Fernet key must be 32 bytes, not " + std::to_string(key.size()));
+	if (key.size() != 64) {
+		DEBUG("Fernet key must be 64 bytes, not " + std::to_string(key.size()));
+		throw std::invalid_argument("Fernet key must be 64 bytes, not " + std::to_string(key.size()));
 	}
 
 	//self._signing_key = key[:16]
-	_signing_key = key.left(16);
+	_signing_key = key.left(32);
 	//self._encryption_key = key[16:]
-	_encryption_key = key.mid(16);
+	_encryption_key = key.mid(32);
 
 	MEM("Fernet object created");
 }
@@ -50,14 +51,13 @@ bool Fernet::verify_hmac(const Bytes& token) {
 }
 
 const Bytes Fernet::encrypt(const Bytes& data) {
-
 	DEBUG("Fernet::encrypt: plaintext length: " + std::to_string(data.size()));
 	Bytes iv = random(16);
 	//double current_time = OS::time();
 	TRACE("Fernet::encrypt: iv:         " + iv.toHex());
 
 	TRACE("Fernet::encrypt: plaintext:  " + data.toHex());
-	Bytes ciphertext = AES_128_CBC::encrypt(
+	Bytes ciphertext = AES_256_CBC::encrypt(
 		PKCS7::pad(data),
 		_encryption_key,
 		iv
@@ -97,7 +97,7 @@ const Bytes Fernet::decrypt(const Bytes& token) {
 
 	try {
 		Bytes plaintext = PKCS7::unpad(
-			AES_128_CBC::decrypt(
+			AES_256_CBC::decrypt(
 				ciphertext,
 				_encryption_key,
 				iv

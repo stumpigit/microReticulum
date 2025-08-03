@@ -8,11 +8,11 @@
 
 namespace RNS { namespace Cryptography {
 
-	class AES_128_CBC {
+	class AES_256_CBC {
 
 	public:
 		static inline const Bytes encrypt(const Bytes& plaintext, const Bytes& key, const Bytes& iv) {
-			CBC<AES128> cbc;
+			CBC<AES256> cbc;
 			cbc.setKey(key.data(), key.size());
 			cbc.setIV(iv.data(), iv.size());
 			Bytes ciphertext;
@@ -21,7 +21,7 @@ namespace RNS { namespace Cryptography {
 		}
 
 		static inline const Bytes decrypt(const Bytes& ciphertext, const Bytes& key, const Bytes& iv) {
-			CBC<AES128> cbc;
+			CBC<AES256> cbc;
 			cbc.setKey(key.data(), key.size());
 			cbc.setIV(iv.data(), iv.size());
 			Bytes plaintext;
@@ -31,7 +31,7 @@ namespace RNS { namespace Cryptography {
 
 		// EXPERIMENTAL - overwrites passed buffer
 		static inline void inplace_encrypt(Bytes& plaintext, const Bytes& key, const Bytes& iv) {
-			CBC<AES128> cbc;
+			CBC<AES256> cbc;
 			cbc.setKey(key.data(), key.size());
 			cbc.setIV(iv.data(), iv.size());
 			cbc.encrypt((uint8_t*)plaintext.data(), plaintext.data(), plaintext.size());
@@ -39,7 +39,7 @@ namespace RNS { namespace Cryptography {
 
 		// EXPERIMENTAL - overwrites passed buffer
 		static inline void inplace_decrypt(Bytes& ciphertext, const Bytes& key, const Bytes& iv) {
-			CBC<AES128> cbc;
+			CBC<AES256> cbc;
 			cbc.setKey(key.data(), key.size());
 			cbc.setIV(iv.data(), iv.size());
 			cbc.decrypt((uint8_t*)ciphertext.data(), ciphertext.data(), ciphertext.size());

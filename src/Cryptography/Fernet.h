@@ -22,7 +22,7 @@ namespace RNS { namespace Cryptography {
 		static const uint8_t FERNET_OVERHEAD  = 48; // Bytes
 
 	public:
-		static inline const Bytes generate_key() { return random(32); }
+		static inline const Bytes generate_key() { return random(64); }
 
 	public:
 		Fernet(const Bytes& key);

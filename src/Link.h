@@ -133,6 +133,8 @@ namespace RNS {
 		void load_peer(const Bytes& peer_pub_bytes, const Bytes& peer_sig_pub_bytes);
 		void rtt_packet(Packet packet);
 
+	protected:
+		bool _established_callbacks_called = false;
 	private:
 		class Object {
 		public:
@@ -149,6 +151,8 @@ namespace RNS {
 			//z _rtt = None
 			//z _establishment_cost = 0
 			Callbacks _callbacks;
+			// have we called the established callback?
+			
 			Type::Link::resource_strategy _resource_strategy = Type::Link::ACCEPT_NONE;
 			//z _outgoing_resources = []
 			//z _incoming_resources = []
