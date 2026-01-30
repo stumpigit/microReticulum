@@ -455,7 +455,8 @@ Recall last heard app_data for a destination hash.
 	else {
 		DEBUG("Could not load ratchet for " + destination_hash.toHex() + " from storage");
 	}
-	return {Bytes::NONE};
+	static Bytes none;
+	return none;
 
 }
 

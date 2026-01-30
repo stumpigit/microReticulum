@@ -68,9 +68,11 @@ const Bytes Fernet::encrypt(const Bytes& data) {
 	Bytes signed_parts = iv + ciphertext;
 
 	//return signed_parts + HMAC::generate(_signing_key, signed_parts)->digest();
-	Bytes sig(HMAC::generate(_signing_key, signed_parts)->digest());
-	TRACE("Fernet::encrypt: sig:        " + sig.toHex());
-	Bytes token(signed_parts + sig);
+	Bytes digest = HMAC::generate(_signing_key, signed_parts)->digest();
+	TRACE("Fernet::encrypt: sig:        " + digest.toHex());
+	Bytes token;
+	token.append(signed_parts);
+	token.append(digest);
 	DEBUG("Fernet::encrypt: token length: " + std::to_string(token.size()));
 	return token;
 }

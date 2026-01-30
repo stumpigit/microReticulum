@@ -986,6 +986,7 @@ void PacketReceipt::check_timeout() {
 			//z thread = threading.Thread(target=self.callbacks.timeout, args=(self,))
 			//z thread.daemon = True
 			//z thread.start();
+			_object->_callbacks._timeout(*this);
 		}
 	}
 }
