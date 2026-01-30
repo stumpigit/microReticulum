@@ -6,7 +6,7 @@
 #include "Cryptography/Hashes.h"
 #include "Cryptography/Ed25519.h"
 #include "Cryptography/X25519.h"
-#include "Cryptography/Fernet.h"
+#include "Cryptography/Token.h"
 
 #include <map>
 #include <string>
@@ -55,13 +55,13 @@ namespace RNS {
 		static std::map<Bytes, RatchetEntry> _known_ratchets;
 
 	public:
+		Identity(bool create_keys = true);
 		Identity(Type::NoneConstructor none) {
 			MEM("Identity NONE object created, this: " + std::to_string((uintptr_t)this) + ", data: " + std::to_string((uintptr_t)_object.get()));
 		}
 		Identity(const Identity& identity) : _object(identity._object) {
 			MEM("Identity object copy created, this: " + std::to_string((uintptr_t)this) + ", data: " + std::to_string((uintptr_t)_object.get()));
 		}
-		Identity(bool create_keys = true);
 		virtual ~Identity() {
 			MEM("Identity object destroyed, this: " + std::to_string((uintptr_t)this) + ", data: " + std::to_string((uintptr_t)_object.get()));
 		}
@@ -106,7 +106,7 @@ namespace RNS {
 		bool load(const char* path);
 		bool to_file(const char* path);
 
-		inline const Bytes get_salt() const { assert(_object); return _object->_hash; }
+		inline const Bytes& get_salt() const { assert(_object); return _object->_hash; }
 		inline const Bytes get_context() const { return {Bytes::NONE}; }
 
 		const Bytes encrypt(const Bytes& plaintext, const Bytes& ratchet = {Bytes::NONE}) const;

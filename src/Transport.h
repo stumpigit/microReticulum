@@ -313,9 +313,10 @@ namespace RNS {
 		static void handle_tunnel(const Bytes& tunnel_id, const Interface& interface);
 		static void register_interface(Interface& interface);
 		static void deregister_interface(const Interface& interface);
+		inline static const std::map<Bytes, Interface&> get_interfaces() { return _interfaces; }
 		static void register_destination(Destination& destination);
 		static void deregister_destination(const Destination& destination);
-		static void register_link(const Link& link);
+		static void register_link(Link& link);
 		static void activate_link(Link& link);
 		static void register_announce_handler(HAnnounceHandler handler);
 		static void deregister_announce_handler(HAnnounceHandler handler);
@@ -332,6 +333,7 @@ namespace RNS {
 		static Bytes next_hop(const Bytes& destination_hash);
 		static Interface next_hop_interface(const Bytes& destination_hash);
 		static uint32_t next_hop_interface_bitrate(const Bytes& destination_hash);
+		static uint16_t next_hop_interface_hw_mtu(const Bytes& destination_hash);
 		static double next_hop_per_bit_latency(const Bytes& destination_hash);
 		static double next_hop_per_byte_latency(const Bytes& destination_hash);
 		static double first_hop_timeout(const Bytes& destination_hash);
@@ -349,7 +351,7 @@ namespace RNS {
 		static void shared_connection_disappeared();
 		static void shared_connection_reappeared();
 		static void drop_announce_queues();
-		static bool announce_emitted(const Packet& packet);
+		static uint64_t announce_emitted(const Packet& packet);
 		static void write_packet_hashlist();
 		static bool read_path_table();
 		static bool write_path_table();
@@ -406,6 +408,7 @@ namespace RNS {
 #elif defined(DESTINATIONS_MAP)
 		static std::map<Bytes, Destination> _destinations;           // All active destinations
 #endif
+		// CBA TODO: Reconsider using std::set for enforcing uniqueness. Maybe consider std::map keyed on hash instead
 		static std::set<Link> _pending_links;           // Links that are being established
 		static std::set<Link> _active_links;           // Links that are active
 		static std::set<Bytes> _packet_hashlist;           // A list of packet hashes for duplicate detection
