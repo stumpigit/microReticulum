@@ -428,7 +428,7 @@ void Destination::receive(const Packet& packet) {
 	else {
 		// CBA TODO Why isn't the Packet decrypting itself?
 		Bytes plaintext(decrypt(packet.data()));
-		packet.ratchet_id(latest_ratched_id());
+		const_cast<Packet&>(packet).ratchet_id(latest_ratched_id());
 		TRACE("Destination::receive: decrypted data: " + plaintext.toHex());
 		if (plaintext) {
 			if (packet.packet_type() == Type::Packet::DATA) {

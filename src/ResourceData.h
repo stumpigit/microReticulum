@@ -7,7 +7,7 @@
 #include "Destination.h"
 #include "Bytes.h"
 #include "Type.h"
-#include "Cryptography/Fernet.h"
+#include "Cryptography/Token.h"
 
 namespace RNS {
 

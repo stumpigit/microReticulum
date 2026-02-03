@@ -177,13 +177,16 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 }
 
 /*static*/ Link Link::validate_request( const Destination& owner, const Bytes& data, const Packet& packet) {
-	if (data.size() == ECPUBSIZE) {
+	if (data.size() == ECPUBSIZE || data.size() == ECPUBSIZE + LINK_MTU_SIZE) {
 		try {
 			Link link({Type::NONE}, nullptr, nullptr, owner, data.left(ECPUBSIZE/2), data.mid(ECPUBSIZE/2, ECPUBSIZE/2));
 			link.set_link_id(packet);
 			link.destination(packet.destination());
 			link.establishment_timeout(ESTABLISHMENT_TIMEOUT_PER_HOP * std::max((uint8_t)1, packet.hops()) + KEEPALIVE);
 			link.establishment_cost(link.establishment_cost() + packet.raw().size());
+			if (data.size() == ECPUBSIZE + LINK_MTU_SIZE) {
+				VERBOSE("Link request includes signalling bytes (mode+MTU)");
+			}
 			VERBOSEF("Validating link request %s", link.link_id().toHex().c_str());
 			TRACEF("Establishment timeout is %f for incoming link request %s", link.establishment_timeout(), link.link_id().toHex().c_str());
 			link.handshake();
@@ -193,7 +196,7 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 			Transport::register_link(link);
 			link.last_inbound(OS::time());
 			link.start_watchdog();
-			
+
 			DEBUGF("Incoming link request %s accepted", link.toString().c_str());
 			return link;
 		}
@@ -203,7 +206,7 @@ Link::Link(const Destination& destination /*= {Type::NONE}*/, Callbacks::establi
 		}
 	}
 	else {
-		DEBUG("Invalid link request payload size, dropping request");
+		DEBUGF("Invalid link request payload size %d, dropping request", (int)data.size());
 		return {Type::NONE};
 	}
 }
@@ -1113,6 +1116,7 @@ void Link::receive(const Packet& packet) {
 					if (!_object->_initiator) {
 						rtt_packet(packet);
 					}
+					break;
 				}
 				case Type::Packet::LINKCLOSE:
 				{

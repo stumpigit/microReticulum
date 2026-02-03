@@ -9,7 +9,6 @@
 #include "Cryptography/X25519.h"
 #include "Cryptography/HKDF.h"
 #include "Cryptography/Token.h"
-#include "Cryptography/Fernet.h"
 #include "Cryptography/Random.h"
 
 #include <algorithm>
@@ -686,9 +685,9 @@ const Bytes Identity::decrypt(const Bytes& ciphertext_token, const std::vector<B
 					);
 					TRACE("Identity::decrypt:ratched: derived key:          " + derived_key.toHex());
 
-					Cryptography::Fernet fernet(derived_key);
+					Cryptography::Token token(derived_key);
 
-					plaintext = fernet.decrypt(ciphertext);
+					plaintext = token.decrypt(ciphertext);
 
 					// CS TODO
 					if (ratchet_id_receiver) {
@@ -724,9 +723,9 @@ const Bytes Identity::decrypt(const Bytes& ciphertext_token, const std::vector<B
 			);
 			TRACE("Identity::decrypt: derived key:          " + derived_key.toHex());
 
-			Cryptography::Fernet fernet(derived_key);
+			Cryptography::Token token(derived_key);
 
-			plaintext = fernet.decrypt(ciphertext);
+			plaintext = token.decrypt(ciphertext);
 		}
 		TRACE("Identity::decrypt: plaintext:  " + plaintext.toHex());
 		//TRACE("Identity::decrypt: Token decrypted data of length " + std::to_string(plaintext.size()));
@@ -776,8 +775,7 @@ bool Identity::validate(const Bytes& signature, const Bytes& message) const {
 	if (_object->_pub) {
 		try {
 			TRACE("Identity::validate: Attempting to verify signature: " + signature.toHex() + " and message: " + message.toHex());
-			_object->_sig_pub->verify(signature, message);
-			return true;
+			return _object->_sig_pub->verify(signature, message);
 		}
 		catch (std::exception& e) {
 			return false;
