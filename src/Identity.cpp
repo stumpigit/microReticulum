@@ -8,7 +8,7 @@
 #include "Cryptography/Ed25519.h"
 #include "Cryptography/X25519.h"
 #include "Cryptography/HKDF.h"
-#include "Cryptography/Fernet.h"
+#include "Cryptography/Token.h"
 #include "Cryptography/Random.h"
 
 #include <algorithm>
@@ -454,7 +454,8 @@ Recall last heard app_data for a destination hash.
 	else {
 		DEBUG("Could not load ratchet for " + destination_hash.toHex() + " from storage");
 	}
-	return {Bytes::NONE};
+	static Bytes none;
+	return none;
 
 }
 
@@ -619,17 +620,17 @@ const Bytes Identity::encrypt(const Bytes& plaintext, const Bytes& ratchet /*= {
 	TRACE("Identity::encrypt: shared key:           " + shared_key.toHex());
 
 	Bytes derived_key = Cryptography::hkdf(
-		32,
+		DERIVED_KEY_LENGTH,
 		shared_key,
 		get_salt(),
 		get_context()
 	);
 	TRACE("Identity::encrypt: derived key:          " + derived_key.toHex());
 
-	Cryptography::Fernet fernet(derived_key);
-	TRACE("Identity::encrypt: Fernet encrypting data of length " + std::to_string(plaintext.size()));
+	Cryptography::Token token(derived_key);
+	TRACE("Identity::encrypt: Token encrypting data of length " + std::to_string(plaintext.size()));
 	TRACE("Identity::encrypt: plaintext:  " + plaintext.toHex());
-	Bytes ciphertext = fernet.encrypt(plaintext);
+	Bytes ciphertext = token.encrypt(plaintext);
 	TRACE("Identity::encrypt: ciphertext: " + ciphertext.toHex());
 
 	return ephemeral_pub_bytes + ciphertext;
@@ -666,7 +667,7 @@ const Bytes Identity::decrypt(const Bytes& ciphertext_token, const std::vector<B
 		Bytes shared_key;
 		//ciphertext = ciphertext_token[Identity.KEYSIZE//8//2:]
 		Bytes ciphertext(ciphertext_token.mid(Type::Identity::KEYSIZE/8/2));
-		TRACE("Identity::decrypt: Fernet decrypting data of length " + std::to_string(ciphertext.size()));
+		TRACE("Identity::decrypt: Token decrypting data of length " + std::to_string(ciphertext.size()));
 		TRACE("Identity::decrypt: ciphertext: " + ciphertext.toHex());
 
 		if (!ratchets.empty()) {
@@ -677,16 +678,16 @@ const Bytes Identity::decrypt(const Bytes& ciphertext_token, const std::vector<B
 					shared_key = ratchet_prv->exchange(peer_pub_bytes);
 					TRACE("Identity::decrypt:ratchet: shared key:           " + shared_key.toHex());
 					Bytes derived_key = Cryptography::hkdf(
-						32,
+						DERIVED_KEY_LENGTH,
 						shared_key,
 						get_salt(),
 						get_context()
 					);
 					TRACE("Identity::decrypt:ratched: derived key:          " + derived_key.toHex());
-			
-					Cryptography::Fernet fernet(derived_key);
-					
-					plaintext = fernet.decrypt(ciphertext);
+
+					Cryptography::Token token(derived_key);
+
+					plaintext = token.decrypt(ciphertext);
 
 					// CS TODO
 					if (ratchet_id_receiver) {
@@ -713,21 +714,21 @@ const Bytes Identity::decrypt(const Bytes& ciphertext_token, const std::vector<B
 		if (plaintext.empty()) {
 			shared_key = _object->_prv->exchange(peer_pub_bytes);
 			TRACE("Identity::decrypt: shared key:           " + shared_key.toHex());
-	
+
 			Bytes derived_key = Cryptography::hkdf(
-				32,
+				DERIVED_KEY_LENGTH,
 				shared_key,
 				get_salt(),
 				get_context()
 			);
 			TRACE("Identity::decrypt: derived key:          " + derived_key.toHex());
-	
-			Cryptography::Fernet fernet(derived_key);
-			
-			plaintext = fernet.decrypt(ciphertext);
+
+			Cryptography::Token token(derived_key);
+
+			plaintext = token.decrypt(ciphertext);
 		}
 		TRACE("Identity::decrypt: plaintext:  " + plaintext.toHex());
-		//TRACE("Identity::decrypt: Fernet decrypted data of length " + std::to_string(plaintext.size()));
+		//TRACE("Identity::decrypt: Token decrypted data of length " + std::to_string(plaintext.size()));
 	}
 	catch (std::exception& e) {
 		DEBUG("Decryption by " + toString() + " failed: " + e.what());
@@ -774,8 +775,7 @@ bool Identity::validate(const Bytes& signature, const Bytes& message) const {
 	if (_object->_pub) {
 		try {
 			TRACE("Identity::validate: Attempting to verify signature: " + signature.toHex() + " and message: " + message.toHex());
-			_object->_sig_pub->verify(signature, message);
-			return true;
+			return _object->_sig_pub->verify(signature, message);
 		}
 		catch (std::exception& e) {
 			return false;

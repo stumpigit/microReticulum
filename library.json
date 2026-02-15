@@ -1,6 +1,6 @@
 {
 	"name": "microReticulum",
-	"version": "0.1.2",
+	"version": "0.2.1",
 	"description": "Port of Reticulum Network Stack to C++ specifically but not exclusively targeting 32-bit and better MCUs",
 	"keywords": "reticulum, rns, mcu, esp32, nrf52",
 	"repository":
@@ -19,7 +19,8 @@
 	"license": "Apache-2.0",
 	"homepage": "https://reticulum.network/",
 	"dependencies": {
-		"ArduinoJson": "~6.21.3"
+		"ArduinoJson": "~7.1.0",
+		"MsgPack": "~0.4.2"
 	},
 	"frameworks": "*",
 	"platforms": "*",

@@ -19,10 +19,10 @@ namespace RNS { namespace Cryptography {
 	class Fernet {
 
 	public:
-		static const uint8_t FERNET_OVERHEAD  = 48; // Bytes
+		using Ptr = std::shared_ptr<Fernet>;
 
 	public:
-		static inline const Bytes generate_key() { return random(32); }
+		static inline const Bytes generate_key() { return random(64); }
 
 	public:
 		Fernet(const Bytes& key);

@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 #include <map>
+#include <set>
 #include <cassert>
 #include <stdint.h>
 
@@ -20,6 +21,23 @@ namespace RNS {
 	class Interface;
 	class Link;
 	class Packet;
+
+	class RequestHandler {
+	public:
+		//p response_generator(path, data, request_id, link_id, remote_identity, requested_at)
+		using response_generator = Bytes(*)(const Bytes& path, const Bytes& data, const Bytes& request_id, const Bytes& link_id, const Identity& remote_identity, double requested_at);
+	public:
+		RequestHandler(const RequestHandler& handler) {
+			_path = handler._path;
+			_response_generator = handler._response_generator;
+			_allow = handler._allow;
+			_allowed_list = handler._allowed_list;
+		}
+		Bytes _path;
+		response_generator _response_generator = nullptr;
+		Type::Destination::request_policies _allow = Type::Destination::ALLOW_NONE;
+		std::set<Bytes> _allowed_list;
+	};
 
     /**
      * @brief A class used to describe endpoints in a Reticulum Network. Destination
@@ -170,25 +188,39 @@ namespace RNS {
 		virtual const Bytes decrypt(const Bytes& data);
 		virtual const Bytes sign(const Bytes& message);
 
-		// getters/setters
+		// CBA
+		bool has_link(const Link& link);
+		void remove_link(const Link& link);
+
+		inline std::string toString() const { if (!_object) return ""; return "{Destination:" + _object->_hash.toHex() + "}"; }
+
+		// getters
 		inline Type::Destination::types type() const { assert(_object); return _object->_type; }
 		inline void type(Type::Destination::types type) const { assert(_object); _object->_type = type; }
 		inline Type::Destination::directions direction() const { assert(_object); return _object->_direction; }
 		inline Type::Destination::proof_strategies proof_strategy() const { assert(_object); return _object->_proof_strategy; }
 		inline const Bytes& hash() const { assert(_object); return _object->_hash; }
-		// CBA Don't allow changing destination after construction since it's used as key in collections
-		//inline void hash(const Bytes& hash) { assert(_object); _object->_hash = hash; _object->_hexhash = _object->_hash.toHex(); }
-		inline const Bytes& link_id() const { assert(_object); return _object->_link_id; }
 		inline uint16_t mtu() const { assert(_object); return _object->_mtu; }
-		inline void mtu(uint16_t mtu) { assert(_object); _object->_mtu = mtu; }
-		inline Type::Link::status status() const { assert(_object); return _object->_status; }
+		// CBA LINK
+		//inline const Bytes& link_id() const { assert(_object); return _object->_link_id; }
+		//inline Type::Link::status status() const { assert(_object); return _object->_status; }
 		inline const Callbacks& callbacks() const { assert(_object); return _object->_callbacks; }
 		inline const Identity& identity() const { assert(_object); return _object->_identity; }
-		inline const std::map<Bytes, PathResponse>& path_responses() { assert(_object); return _object->_path_responses; }
+		inline const std::map<Bytes, PathResponse>& path_responses() const { assert(_object); return _object->_path_responses; }
+		inline const std::map<Bytes, RequestHandler>& request_handlers() const { assert(_object); return _object->_request_handlers; }
 		inline const Bytes& latest_ratched_id() const { assert(_object); return _object->latest_ratched_id;}
 		inline const void latest_ratched_id(Bytes latest_ratched_id) const { assert(_object); _object->latest_ratched_id=latest_ratched_id;}
 
-		inline std::string toString() const { if (!_object) return ""; return "{Destination:" + _object->_hash.toHex() + "}"; }
+		// setters
+		// CBA Don't allow changing destination hash after construction since it's used as key in collections
+		//inline void hash(const Bytes& hash) { assert(_object); _object->_hash = hash; _object->_hexhash = _object->_hash.toHex(); }
+		inline void type(Type::Destination::types type) { assert(_object); _object->_type = type; }
+		inline void mtu(uint16_t mtu) { assert(_object); _object->_mtu = mtu; }
+		// CBA LINK
+		//inline void link_id(const Bytes& id) { assert(_object); _object->_link_id = id; }
+		//inline void last_outbound(double time) { assert(_object); _object->_last_outbound = time; }
+		//inline void increment_tx() { assert(_object); ++_object->_tx; }
+		//inline void increment_txbytes(uint16_t bytes) { assert(_object); _object->_txbytes += bytes; }
 
 	private:
 		class Object {
@@ -198,7 +230,7 @@ namespace RNS {
 		private:
 			bool _accept_link_requests = true;
 			Callbacks _callbacks;
-			//z _request_handlers = {}
+			std::map<Bytes, RequestHandler> _request_handlers;
 			Type::Destination::types _type;
 			Type::Destination::directions _direction;
 			Type::Destination::proof_strategies _proof_strategy = Type::Destination::PROVE_NONE;
@@ -209,12 +241,12 @@ namespace RNS {
 			uint64_t latest_ratchet_time;
 			Bytes latest_ratched_id = {Bytes::NONE};
 			bool __enforce_ratchets = false;
-			uint8_t retained_ratchets = RNS::Type::Destination::RATCHET_COUNT;
-			uint8_t ratchet_interval = RNS::Type::Destination::RATCHET_INTERVAL;
+			uint16_t retained_ratchets = RNS::Type::Destination::RATCHET_COUNT;
+			uint16_t ratchet_interval = RNS::Type::Destination::RATCHET_INTERVAL;
 
 
 			std::map<Bytes, PathResponse> _path_responses;
-			//z _links = []
+			std::set<Link> _links;
 
 			Identity _identity;
 			std::string _name;
@@ -229,11 +261,16 @@ namespace RNS {
 			//z _callback = None
 			//z _proofcallback = None
 
-			// CBA _link_id is expected by packet but only present in Link
+			// CBA LINK
+			// CBA _link_id is expected by Packet but only present in Link
 			// CBA TODO determine if Link needs to inherit from Destination or vice-versa
-			Bytes _link_id;
+			//Bytes _link_id;
 
-			Type::Link::status _status;
+			//Type::Link::status _status;
+
+			//double _last_outbound = 0.0;
+			//uint16_t _tx = 0;
+			//uint32_t _txbytes = 0;
 
 		friend class Destination;
 		};

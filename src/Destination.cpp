@@ -428,7 +428,7 @@ void Destination::receive(const Packet& packet) {
 	else {
 		// CBA TODO Why isn't the Packet decrypting itself?
 		Bytes plaintext(decrypt(packet.data()));
-		packet.ratched_id(latest_ratched_id());
+		const_cast<Packet&>(packet).ratchet_id(latest_ratched_id());
 		TRACE("Destination::receive: decrypted data: " + plaintext.toHex());
 		if (plaintext) {
 			if (packet.packet_type() == Type::Packet::DATA) {
@@ -562,10 +562,11 @@ bool Destination::set_ratchet_interval(uint8_t interval) {
 void Destination::incoming_link_request(const Bytes& data, const Packet& packet) {
 	assert(_object);
 	if (_object->_accept_link_requests) {
-		Link *link = RNS::Link::validate_request(*this, data, packet); // Link::validate_request(*this, data, packet);
+TRACE("***** Accepting link request");
+		RNS::Link link = Link::validate_request(*this, data, packet);
 		if (link) {
 			DEBUG("Link is validated");
-			//_links.append(link);
+			_object->_links.insert(link);
 		}
 	}
 }
@@ -686,4 +687,14 @@ Signs information for ``RNS.Destination.SINGLE`` type destination.
 		return _object->_identity.sign(message);
 	}
 	return {Bytes::NONE};
+}
+
+bool Destination::has_link(const Link& link) {
+	assert(_object);
+	return (_object->_links.count(link) > 0);
+}
+
+void Destination::remove_link(const Link& link) {
+	assert(_object);
+	_object->_links.erase(link);
 }
